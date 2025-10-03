@@ -199,6 +199,7 @@ async getBanners(params = {}) {
   }
 
   async deleteFoodItem(id) {
+    console.log("checking",id)
     return this.request(`/food-items/${id}`, {
       method: 'DELETE',
     });
@@ -660,7 +661,7 @@ const [offerStats, setOfferStats] = useState({
     totalSavings: 0
   });
  useEffect(() => {
-    if (activeTab === 'offers') {
+    if (activeTab === 'menu-items') {
       Promise.all([loadCategories(), loadFoodItems()]).then(() => loadOffers());
     }
   }, [activeTab]);
@@ -903,6 +904,9 @@ const loadOffers = async (params = {}) => {
           switch (type) {
             case 'categorie':
               await apiService.deleteCategory(id);
+              break;
+              case 'menu item':
+              await apiService.deleteFoodItem(id);
               break;
             case 'food-item':
               await apiService.deleteFoodItem(id);
@@ -3397,23 +3401,7 @@ onDelete={handleDelete}
       ))}
     
             </div>
-            <div className="mt-10 p-6 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl border border-blue-200">
-              <h3 className="font-bold text-gray-900 mb-4">Quick Stats</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Today's Orders</span>
-                  <span className="font-bold text-blue-600">24</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Revenue</span>
-                  <span className="font-bold text-emerald-600">$1,240</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Active Items</span>
-                  <span className="font-bold text-purple-600">{foodItems.length}</span>
-                </div>
-              </div>
-            </div>
+       
           </div>
         </nav>
         <main className="flex-1 p-8 overflow-auto">
