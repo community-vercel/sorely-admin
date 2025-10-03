@@ -3399,7 +3399,6 @@ onDelete={handleDelete}
           <span>{item.name}</span>
         </button>
       ))}
-    
             </div>
        
           </div>
