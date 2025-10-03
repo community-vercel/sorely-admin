@@ -36,6 +36,7 @@ import {
   MapPin,
   Phone,
 } from 'lucide-react';
+import { useRouter } from "next/navigation";
 
 // API Configuration
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://soleybackend.vercel.app/api/v1';
@@ -934,6 +935,7 @@ const loadOffers = async (params = {}) => {
       showNotificationDialog('Error', 'Error updating order status: ' + error.message, 'error');
     }
   };
+  const router = useRouter();
 
   // Navigation items
 const navigationItems = [
@@ -3368,23 +3370,32 @@ onDelete={handleDelete}
           <div className="p-8">
             <div className="space-y-3">
               {navigationItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-left transition-all duration-300 font-semibold ${
-                    activeTab === item.id
-                      ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg transform scale-[1.02]`
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:scale-[1.01]'
-                  }`}
-                >
-                  <div className={`p-2 rounded-xl ${
-                    activeTab === item.id ? 'bg-gray-900 bg-opacity-20' : 'bg-gray-100'
-                  }`}>
-                    <item.icon className="w-5 h-5" />
-                  </div>
-                  <span>{item.name}</span>
-                </button>
-              ))}
+        <button
+          key={item.id}
+          onClick={() => {
+            if (item.id === "offers") {
+              router.push("/offer"); // Navigate to /offers page
+            } else {
+              setActiveTab(item.id);
+            }
+          }}
+          className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-left transition-all duration-300 font-semibold ${
+            activeTab === item.id
+              ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg transform scale-[1.02]`
+              : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:scale-[1.01]"
+          }`}
+        >
+          <div
+            className={`p-2 rounded-xl ${
+              activeTab === item.id ? "bg-gray-900 bg-opacity-20" : "bg-gray-100"
+            }`}
+          >
+            <item.icon className="w-5 h-5" />
+          </div>
+          <span>{item.name}</span>
+        </button>
+      ))}
+    
             </div>
             <div className="mt-10 p-6 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl border border-blue-200">
               <h3 className="font-bold text-gray-900 mb-4">Quick Stats</h3>
