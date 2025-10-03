@@ -3404,10 +3404,6 @@ onDelete={handleDelete}
 
 
 
-
-
-
-
           </div>
         </nav>
         <main className="flex-1 p-8 overflow-auto">
