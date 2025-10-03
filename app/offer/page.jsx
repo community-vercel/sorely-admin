@@ -38,7 +38,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from "next/navigation";
 
-// API Configuration
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://soleybackend.vercel.app/api/v1';
 
 // API Service Class
