@@ -125,7 +125,7 @@ class ApiService {
       body: JSON.stringify(data),
     });
   }
-async getBanners(params = {}) {
+  async getBanners(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     return this.request(`/banners/getall${queryString ? `?${queryString}` : ''}`);
   }
@@ -199,7 +199,7 @@ async getBanners(params = {}) {
   }
 
   async deleteFoodItem(id) {
-    console.log("checking",id)
+    console.log("checking", id)
     return this.request(`/food-items/${id}`, {
       method: 'DELETE',
     });
@@ -214,48 +214,48 @@ async getBanners(params = {}) {
 
   // Offers API
   // Offers API
-async getOffers(params = {}) {
-  const queryString = new URLSearchParams(params).toString();
-  return this.request(`/offer${queryString ? `?${queryString}` : ''}`);
-}
+  async getOffers(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.request(`/offer${queryString ? `?${queryString}` : ''}`);
+  }
 
-async getItemsWithOffers() {
-  return this.request('/offer/items-with-offers');
-}
+  async getItemsWithOffers() {
+    return this.request('/offer/items-with-offers');
+  }
 
-async createOffer(data) {
-  return this.request('/offer', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
+  async createOffer(data) {
+    return this.request('/offer', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
 
-async updateOffer(id, data) {
-  return this.request(`/offer/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  });
-}
+  async updateOffer(id, data) {
+    return this.request(`/offer/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
 
-async deleteOffer(id) {
-  return this.request(`/offer/${id}`, {
-    method: 'DELETE',
-  });
-}
+  async deleteOffer(id) {
+    return this.request(`/offer/${id}`, {
+      method: 'DELETE',
+    });
+  }
 
-async applyOfferToItems(offerId, itemIds) {
-  return this.request(`/offer/${offerId}/apply-to-items`, {
-    method: 'POST',
-    body: JSON.stringify({ itemIds }),
-  });
-}
+  async applyOfferToItems(offerId, itemIds) {
+    return this.request(`/offer/${offerId}/apply-to-items`, {
+      method: 'POST',
+      body: JSON.stringify({ itemIds }),
+    });
+  }
 
-async removeOfferFromItems(offerId, itemIds) {
-  return this.request(`/offer/${offerId}/remove-from-items`, {
-    method: 'DELETE',
-    body: JSON.stringify({ itemIds }),
-  });
-}
+  async removeOfferFromItems(offerId, itemIds) {
+    return this.request(`/offer/${offerId}/remove-from-items`, {
+      method: 'DELETE',
+      body: JSON.stringify({ itemIds }),
+    });
+  }
 
   // Orders API
   async getOrders(params = {}) {
@@ -296,9 +296,8 @@ const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText
     <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl transform transition-all border-0 overflow-hidden">
         <div className="p-8 text-center">
-          <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${
-            type === 'danger' ? 'bg-red-50' : 'bg-amber-50'
-          }`}>
+          <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${type === 'danger' ? 'bg-red-50' : 'bg-amber-50'
+            }`}>
             {type === 'danger' ? (
               <AlertTriangle className="w-8 h-8 text-red-600" />
             ) : (
@@ -316,11 +315,10 @@ const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText
             </button>
             <button
               onClick={onConfirm}
-              className={`flex-1 px-6 py-3 text-white rounded-xl font-medium transition-all duration-200 hover:scale-[0.98] shadow-lg ${
-                type === 'danger' 
-                  ? 'bg-red-600 hover:bg-red-700 shadow-red-200' 
+              className={`flex-1 px-6 py-3 text-white rounded-xl font-medium transition-all duration-200 hover:scale-[0.98] shadow-lg ${type === 'danger'
+                  ? 'bg-red-600 hover:bg-red-700 shadow-red-200'
                   : 'bg-amber-600 hover:bg-amber-700 shadow-amber-200'
-              }`}
+                }`}
             >
               {confirmText}
             </button>
@@ -339,9 +337,8 @@ const NotificationDialog = ({ isOpen, onClose, title, message, type = "success" 
     <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl transform transition-all border-0 overflow-hidden">
         <div className="p-8 text-center">
-          <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${
-            type === 'success' ? 'bg-emerald-50' : 'bg-red-50'
-          }`}>
+          <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${type === 'success' ? 'bg-emerald-50' : 'bg-red-50'
+            }`}>
             {type === 'success' ? (
               <Check className="w-8 h-8 text-emerald-600" />
             ) : (
@@ -352,11 +349,10 @@ const NotificationDialog = ({ isOpen, onClose, title, message, type = "success" 
           <p className="text-gray-600 mb-8 leading-relaxed">{message}</p>
           <button
             onClick={onClose}
-            className={`w-full px-6 py-3 text-white rounded-xl font-medium transition-all duration-200 hover:scale-[0.98] shadow-lg ${
-              type === 'success' 
-                ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' 
+            className={`w-full px-6 py-3 text-white rounded-xl font-medium transition-all duration-200 hover:scale-[0.98] shadow-lg ${type === 'success'
+                ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200'
                 : 'bg-red-600 hover:bg-red-700 shadow-red-200'
-            }`}
+              }`}
           >
             Continue
           </button>
@@ -396,7 +392,7 @@ const ImageUpload = ({ value, onChange, className = "", multiple = false }) => {
             setPreview(prev => [...prev, e.target.result]);
           };
           reader.readAsDataURL(file);
-          
+
           return await apiService.uploadToVercelBlob(file);
         });
 
@@ -406,7 +402,7 @@ const ImageUpload = ({ value, onChange, className = "", multiple = false }) => {
         setPreview(newUrls);
       } else {
         const file = files[0];
-        
+
         const reader = new FileReader();
         reader.onload = (e) => setPreview(e.target.result);
         reader.readAsDataURL(file);
@@ -449,9 +445,8 @@ const ImageUpload = ({ value, onChange, className = "", multiple = false }) => {
           />
           <label
             htmlFor="image-upload"
-            className={`inline-flex items-center px-6 py-3 bg-white border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50 transition-all duration-200 ${
-              uploading ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
+            className={`inline-flex items-center px-6 py-3 bg-white border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50 transition-all duration-200 ${uploading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
           >
             {uploading ? (
               <Loader2 className="w-5 h-5 mr-3 animate-spin text-blue-600" />
@@ -463,7 +458,7 @@ const ImageUpload = ({ value, onChange, className = "", multiple = false }) => {
             </span>
           </label>
         </div>
-        
+
         {!multiple && (
           <div className="flex-1">
             <input
@@ -556,7 +551,7 @@ const FormArrayField = ({ items, onChange, fieldConfig, title }) => {
           <span>Add {title.slice(0, -1)}</span>
         </button>
       </div>
-      
+
       {items.map((item, index) => (
         <div key={index} className="border border-gray-200 rounded-xl p-5 bg-gradient-to-br from-gray-50 to-white">
           <div className="flex justify-end mb-3">
@@ -604,7 +599,7 @@ const FormArrayField = ({ items, onChange, fieldConfig, title }) => {
           </div>
         </div>
       ))}
-      
+
       {items.length === 0 && (
         <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
           <div className="text-4xl mb-2">📦</div>
@@ -638,7 +633,7 @@ const RestaurantAdminDashboard = () => {
   const [foodItems, setFoodItems] = useState([]);
   const [offers, setOffers] = useState([]);
   const [orders, setOrders] = useState([]);
-  
+
   const [settings, setSettings] = useState({
     restaurantName: 'Delicious Bites Restaurant',
     contactPhone: '+1 (555) 123-4567',
@@ -654,18 +649,18 @@ const RestaurantAdminDashboard = () => {
     totalOffers: 0,
   });
 
-const [offerStats, setOfferStats] = useState({
+  const [offerStats, setOfferStats] = useState({
     activeOffers: 0,
     featuredOffers: 0,
     itemsWithOffers: 0,
     totalSavings: 0
   });
- useEffect(() => {
+  useEffect(() => {
     if (activeTab === 'menu-items') {
       Promise.all([loadCategories(), loadFoodItems()]).then(() => loadOffers());
     }
   }, [activeTab]);
-const loadOfferStats = async () => {
+  const loadOfferStats = async () => {
     try {
       const response = await apiService.getOffers();
       setDashboardStats((prev) => ({
@@ -701,7 +696,7 @@ const loadOfferStats = async () => {
         case 'offers':
           await loadOffers();
           break;
-            case 'banners':
+        case 'banners':
           await loadBanners();
           break;
         case 'orders':
@@ -718,30 +713,30 @@ const loadOfferStats = async () => {
     }
   };
 
- const loadDashboardData = async () => {
-  try {
-    const [statsResponse, ordersResponse, categoriesResponse, itemsResponse, offersResponse] = await Promise.all([
-      apiService.getOrderStats().catch(() => ({ stats: null })),
-      apiService.getOrders({ limit: 5 }).catch(() => ({ orders: [] })),
-      apiService.getCategories().catch(() => ({ categories: [] })),
-      apiService.getFoodItems({ limit: 5 }).catch(() => ({ items: [] })),
-      apiService.getOffers({ limit: 5 }).catch(() => ({ offers: [] })),
-    ]);
+  const loadDashboardData = async () => {
+    try {
+      const [statsResponse, ordersResponse, categoriesResponse, itemsResponse, offersResponse] = await Promise.all([
+        apiService.getOrderStats().catch(() => ({ stats: null })),
+        apiService.getOrders({ limit: 5 }).catch(() => ({ orders: [] })),
+        apiService.getCategories().catch(() => ({ categories: [] })),
+        apiService.getFoodItems({ limit: 5 }).catch(() => ({ items: [] })),
+        apiService.getOffers({ limit: 5 }).catch(() => ({ offers: [] })),
+      ]);
 
-    setDashboardStats({
-      revenue: { current: statsResponse.stats?.totalRevenue || 45250.75, growth: 15.3, period: 'month' },
-      orders: { current: statsResponse.stats?.totalOrders || 2847, growth: 12.8, period: 'week' },
-      customers: { current: statsResponse.stats?.uniqueCustomers || 1456, growth: 8.7, period: 'month' },
-      menuItems: { current: itemsResponse.count || 68, growth: 5.2, period: 'month' },
-      activeOffers: { current: offersResponse.totalOffers || 0, growth: 10, period: 'month' },
-    });
+      setDashboardStats({
+        revenue: { current: statsResponse.stats?.totalRevenue || 45250.75, growth: 15.3, period: 'month' },
+        orders: { current: statsResponse.stats?.totalOrders || 2847, growth: 12.8, period: 'week' },
+        customers: { current: statsResponse.stats?.uniqueCustomers || 1456, growth: 8.7, period: 'month' },
+        menuItems: { current: itemsResponse.count || 68, growth: 5.2, period: 'month' },
+        activeOffers: { current: offersResponse.totalOffers || 0, growth: 10, period: 'month' },
+      });
 
-    setOrders(ordersResponse.orders || []);
-    setOffers(offersResponse.offers || []);
-  } catch (error) {
-    console.error('Dashboard data error:', error);
-  }
-};
+      setOrders(ordersResponse.orders || []);
+      setOffers(offersResponse.offers || []);
+    } catch (error) {
+      console.error('Dashboard data error:', error);
+    }
+  };
   const loadCategories = async () => {
     const response = await apiService.getCategories();
     setCategories(response.categories || []);
@@ -752,34 +747,34 @@ const loadOfferStats = async () => {
     setFoodItems(response.items || []);
   };
 
-const loadOffers = async (params = {}) => {
-  setLoading(true);
-  try {
-    // Ensure only valid parameters are sent
-    const queryParams = {
-      page: params.page || 1,
-      limit: params.limit || 20,
-    };
-    if (params.featured !== undefined && params.featured !== null) {
-      queryParams.featured = params.featured;
-    }
-    if (params.type) {
-      queryParams.type = params.type;
-    }
+  const loadOffers = async (params = {}) => {
+    setLoading(true);
+    try {
+      // Ensure only valid parameters are sent
+      const queryParams = {
+        page: params.page || 1,
+        limit: params.limit || 20,
+      };
+      if (params.featured !== undefined && params.featured !== null) {
+        queryParams.featured = params.featured;
+      }
+      if (params.type) {
+        queryParams.type = params.type;
+      }
 
-    const response = await apiService.getOffers(queryParams);
-    setOffers(response.offers || []);
-    setPagination({
-      currentPage: response.currentPage,
-      totalPages: response.totalPages,
-      totalOffers: response.totalOffers,
-    });
-  } catch (error) {
-    showNotificationDialog('Error', 'Error loading offers: ' + error.message, 'error');
-  } finally {
-    setLoading(false);
-  }
-};
+      const response = await apiService.getOffers(queryParams);
+      setOffers(response.offers || []);
+      setPagination({
+        currentPage: response.currentPage,
+        totalPages: response.totalPages,
+        totalOffers: response.totalOffers,
+      });
+    } catch (error) {
+      showNotificationDialog('Error', 'Error loading offers: ' + error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
   const loadBanners = async (params = {}) => {
     const response = await apiService.getBanners(params);
     setBanners(response.data || []);
@@ -905,7 +900,7 @@ const loadOffers = async (params = {}) => {
             case 'categorie':
               await apiService.deleteCategory(id);
               break;
-              case 'menu item':
+            case 'menu item':
               await apiService.deleteFoodItem(id);
               break;
             case 'food-item':
@@ -914,9 +909,9 @@ const loadOffers = async (params = {}) => {
             case 'offer':
               await apiService.deleteOffer(id);
               break;
-                 case 'banner':
-            await apiService.deleteBanner(id);
-            break;
+            case 'banner':
+              await apiService.deleteBanner(id);
+              break;
           }
           showNotificationDialog('Success!', `${type} deleted successfully`);
           loadData();
@@ -942,15 +937,15 @@ const loadOffers = async (params = {}) => {
   const router = useRouter();
 
   // Navigation items
-const navigationItems = [
-  { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, gradient: 'from-blue-500 to-indigo-600' },
-  { id: 'categories', name: 'Categories', icon: Grid3X3, gradient: 'from-emerald-500 to-teal-600' },
-  { id: 'menu-items', name: 'Menu Items', icon: MenuIcon, gradient: 'from-orange-500 to-red-600' },
-  { id: 'offers', name: 'Offers', icon: Percent, gradient: 'from-purple-500 to-pink-600' },
-  { id: 'orders', name: 'Orders', icon: ShoppingBag, gradient: 'from-cyan-500 to-blue-600' },
-  { id: 'banners', name: 'Banners', icon: ImageIcon, gradient: 'from-rose-500 to-pink-600' }, // New banner navigation item
-  { id: 'settings', name: 'Settings', icon: Settings, gradient: 'from-gray-500 to-gray-700' },
-];
+  const navigationItems = [
+    { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, gradient: 'from-blue-500 to-indigo-600' },
+    { id: 'categories', name: 'Categories', icon: Grid3X3, gradient: 'from-emerald-500 to-teal-600' },
+    { id: 'menu-items', name: 'Menu Items', icon: MenuIcon, gradient: 'from-orange-500 to-red-600' },
+    { id: 'offers', name: 'Offers', icon: Percent, gradient: 'from-purple-500 to-pink-600' },
+    { id: 'orders', name: 'Orders', icon: ShoppingBag, gradient: 'from-cyan-500 to-blue-600' },
+    { id: 'banners', name: 'Banners', icon: ImageIcon, gradient: 'from-rose-500 to-pink-600' }, // New banner navigation item
+    { id: 'settings', name: 'Settings', icon: Settings, gradient: 'from-gray-500 to-gray-700' },
+  ];
   // Enhanced Dashboard Stats Component
   const DashboardStats = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
@@ -991,21 +986,21 @@ const navigationItems = [
           bgGradient: 'from-orange-50 to-orange-100',
           iconBg: 'bg-orange-500',
         },
-         {
-        title: 'Active Offers',
-        value: dashboardStats.activeOffers.current,
-        growth: `+${dashboardStats.activeOffers.growth}%`,
-        icon: Percent,
-        gradient: 'from-purple-500 to-pink-600',
-        bgGradient: 'from-purple-50 to-pink-100',
-        iconBg: 'bg-purple-500',
-      },
+        {
+          title: 'Active Offers',
+          value: dashboardStats.activeOffers.current,
+          growth: `+${dashboardStats.activeOffers.growth}%`,
+          icon: Percent,
+          gradient: 'from-purple-500 to-pink-600',
+          bgGradient: 'from-purple-50 to-pink-100',
+          iconBg: 'bg-purple-500',
+        },
       ].map((stat, index) => (
         <div
           key={index}
           className={`relative p-8 rounded-3xl shadow-lg border-0 bg-gradient-to-br ${stat.bgGradient} hover:shadow-xl transition-all duration-300 hover:scale-[1.02] overflow-hidden`}
         >
-          
+
           <div className="relative flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm font-semibold text-gray-600 mb-2">{stat.title}</p>
@@ -1035,8 +1030,8 @@ const navigationItems = [
         <div className={`bg-white rounded-3xl ${size} w-full max-h-[90vh] overflow-hidden shadow-2xl border-0`}>
           <div className="flex items-center justify-between p-8 border-b border-gray-100 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50">
             <h3 className="text-2xl font-bold text-gray-900">{title}</h3>
-            <button 
-              onClick={closeModal} 
+            <button
+              onClick={closeModal}
               className="p-3 hover:bg-white hover:bg-opacity-60 rounded-2xl transition-all duration-200 group"
             >
               <X className="w-6 h-6 text-gray-600 group-hover:text-gray-900" />
@@ -1061,7 +1056,7 @@ const navigationItems = [
       imageUrl: editingItem?.imageUrl || '',
       images: editingItem?.images || [],
       category: editingItem?.category?._id || '',
-      
+
       // Food Properties
       isVeg: editingItem?.isVeg || false,
       isVegan: editingItem?.isVegan || false,
@@ -1072,23 +1067,23 @@ const navigationItems = [
       isPopular: editingItem?.isPopular || false,
       isActive: editingItem?.isActive !== false,
       isAvailable: editingItem?.isAvailable !== false,
-      
+
       // Stock & Business
       preparationTime: editingItem?.preparationTime || 15,
       stockQuantity: editingItem?.stockQuantity || 0,
       lowStockAlert: editingItem?.lowStockAlert || 10,
       sku: editingItem?.sku || '',
       barcode: editingItem?.barcode || '',
-      
+
       // Product Details
       servingSize: editingItem?.servingSize || '',
       weight: editingItem?.weight || 0,
       tags: editingItem?.tags?.join(', ') || '',
-      
+
       // Availability
       availableFrom: editingItem?.availableFrom ? new Date(editingItem.availableFrom).toISOString().slice(0, 16) : '',
       availableUntil: editingItem?.availableUntil ? new Date(editingItem.availableUntil).toISOString().slice(0, 16) : '',
-      
+
       // Enhanced fields
       mealSizes: editingItem?.mealSizes || [],
       extras: editingItem?.extras || [],
@@ -1104,7 +1099,7 @@ const navigationItems = [
         sugar: 0,
         sodium: 0
       },
-      
+
       // SEO Data
       seoData: editingItem?.seoData || {
         metaTitle: '',
@@ -1150,7 +1145,7 @@ const navigationItems = [
         availableUntil: formData.availableUntil ? new Date(formData.availableUntil).toISOString() : null,
         seoData: {
           ...formData.seoData,
-          keywords: typeof formData.seoData.keywords === 'string' 
+          keywords: typeof formData.seoData.keywords === 'string'
             ? formData.seoData.keywords.split(',').map(k => k.trim()).filter(k => k)
             : formData.seoData.keywords
         }
@@ -1195,7 +1190,7 @@ const navigationItems = [
               </select>
             </div>
           </div>
-          
+
           <div className="mt-6">
             <label className="block text-sm font-semibold text-gray-800 mb-3">Description *</label>
             <textarea
@@ -1220,8 +1215,8 @@ const navigationItems = [
             <label className="block text-sm font-semibold text-gray-800 mb-3">Additional Images</label>
             <ImageUpload
               value={formData.images}
-              onChange={(urls) => setFormData({ 
-                ...formData, 
+              onChange={(urls) => setFormData({
+                ...formData,
                 images: urls.map(url => ({ url, alt: formData.name }))
               })}
               multiple={true}
@@ -1364,7 +1359,7 @@ const navigationItems = [
             <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
             Food Properties & Status
           </h4>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
             {[
               { key: 'isVeg', label: 'Vegetarian', desc: 'Contains no meat' },
@@ -1771,185 +1766,185 @@ const navigationItems = [
       </form>
     );
   };
-const BannerForm = () => {
-  const [formData, setFormData] = useState({
-    title: editingItem?.title || '',
-    description: editingItem?.description || '',
-    imageUrl: editingItem?.imageUrl || '',
-    category: editingItem?.category || '',
-    isActive: editingItem?.isActive !== false,
-    order: editingItem?.order || 0,
-    link: editingItem?.link || '',
-    startDate: editingItem?.startDate ? new Date(editingItem.startDate).toISOString().slice(0, 16) : '',
-    endDate: editingItem?.endDate ? new Date(editingItem.endDate).toISOString().slice(0, 16) : '',
-  });
+  const BannerForm = () => {
+    const [formData, setFormData] = useState({
+      title: editingItem?.title || '',
+      description: editingItem?.description || '',
+      imageUrl: editingItem?.imageUrl || '',
+      category: editingItem?.category || '',
+      isActive: editingItem?.isActive !== false,
+      order: editingItem?.order || 0,
+      link: editingItem?.link || '',
+      startDate: editingItem?.startDate ? new Date(editingItem.startDate).toISOString().slice(0, 16) : '',
+      endDate: editingItem?.endDate ? new Date(editingItem.endDate).toISOString().slice(0, 16) : '',
+    });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const submitData = {
-        ...formData,
-        order: parseInt(formData.order) || 0,
-        startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
-        endDate: formData.endDate ? formData.endDate ? new Date(formData.endDate).toISOString() : null : null,
-      };
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      setLoading(true);
+      try {
+        const submitData = {
+          ...formData,
+          order: parseInt(formData.order) || 0,
+          startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
+          endDate: formData.endDate ? formData.endDate ? new Date(formData.endDate).toISOString() : null : null,
+        };
 
-      if (editingItem) {
-        await apiService.updateBanner(editingItem._id, submitData);
-        showNotificationDialog('Success!', 'Banner updated successfully');
-      } else {
-        await apiService.createBanner(submitData);
-        showNotificationDialog('Success!', 'Banner created successfully');
+        if (editingItem) {
+          await apiService.updateBanner(editingItem._id, submitData);
+          showNotificationDialog('Success!', 'Banner updated successfully');
+        } else {
+          await apiService.createBanner(submitData);
+          showNotificationDialog('Success!', 'Banner created successfully');
+        }
+        closeModal();
+        loadData();
+      } catch (error) {
+        showNotificationDialog('Error', 'Error: ' + error.message, 'error');
+      } finally {
+        setLoading(false);
       }
-      closeModal();
-      loadData();
-    } catch (error) {
-      showNotificationDialog('Error', 'Error: ' + error.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Banner Details */}
-      <div className="bg-gradient-to-br from-rose-50 to-white p-6 rounded-2xl border border-rose-200">
-        <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <div className="w-2 h-2 bg-rose-500 rounded-full"></div>
-          Banner Details
-        </h4>
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Banner Title *</label>
-            <input
-              type="text"
-              required
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-all bg-white"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Enter banner title"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Description</label>
-            <textarea
-              rows="4"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-all resize-none bg-white"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Banner description"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Banner Image *</label>
-            <ImageUpload
-              value={formData.imageUrl}
-              onChange={(url) => setFormData({ ...formData, imageUrl: url })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Category</label>
-            <select
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-all bg-white"
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            >
-              <option value="">Select Category</option>
-               {['promotional', 'seasonal', 'featured', 'general'].map((opt) => (
-    <option key={opt} value={opt}>
-      {opt.charAt(0).toUpperCase() + opt.slice(1)}
-    </option>
-  ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Link URL</label>
-            <input
-              type="url"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-all bg-white"
-              value={formData.link}
-              onChange={(e) => setFormData({ ...formData, link: e.target.value })}
-              placeholder="https://example.com"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Schedule & Status */}
-      <div className="bg-gradient-to-br from-pink-50 to-white p-6 rounded-2xl border border-pink-200">
-        <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
-          Schedule & Status
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Start Date</label>
-            <input
-              type="datetime-local"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all bg-white"
-              value={formData.startDate}
-              onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-3">End Date</label>
-            <input
-              type="datetime-local"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all bg-white"
-              value={formData.endDate}
-              onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Display Order</label>
-            <input
-              type="number"
-              min="0"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all bg-white"
-              value={formData.order}
-              onChange={(e) => setFormData({ ...formData, order: e.target.value })}
-            />
-          </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-3">
+    return (
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Banner Details */}
+        <div className="bg-gradient-to-br from-rose-50 to-white p-6 rounded-2xl border border-rose-200">
+          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <div className="w-2 h-2 bg-rose-500 rounded-full"></div>
+            Banner Details
+          </h4>
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-3">Banner Title *</label>
               <input
-                type="checkbox"
-                id="isActive"
-                checked={formData.isActive}
-                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                className="w-5 h-5 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+                type="text"
+                required
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-all bg-white"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Enter banner title"
               />
-              <label htmlFor="isActive" className="text-sm font-semibold text-gray-800">
-                Active Banner
-              </label>
             </div>
-            <p className="text-xs text-gray-500 ml-8 mt-1">Make this banner visible to customers</p>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-3">Description</label>
+              <textarea
+                rows="4"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-all resize-none bg-white"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Banner description"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-3">Banner Image *</label>
+              <ImageUpload
+                value={formData.imageUrl}
+                onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-3">Category</label>
+              <select
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-all bg-white"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              >
+                <option value="">Select Category</option>
+                {['promotional', 'seasonal', 'featured', 'general'].map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-3">Link URL</label>
+              <input
+                type="url"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-all bg-white"
+                value={formData.link}
+                onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+                placeholder="https://example.com"
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex justify-end gap-4">
-        <button
-          type="button"
-          onClick={closeModal}
-          className="px-8 py-4 text-gray-700 bg-gray-100 rounded-2xl hover:bg-gray-200 font-semibold transition-all duration-200 hover:scale-[0.98]"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={loading}
-          className="px-8 py-4 bg-gradient-to-r from-rose-600 to-pink-600 text-white rounded-2xl hover:from-rose-700 hover:to-pink-700 disabled:opacity-50 flex items-center gap-3 font-semibold transition-all duration-200 hover:scale-[0.98] shadow-lg shadow-rose-200"
-        >
-          {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-          <span>{editingItem ? 'Update' : 'Create'} Banner</span>
-        </button>
-      </div>
-    </form>
-  );
-};
-const OfferForm = () => {
+        {/* Schedule & Status */}
+        <div className="bg-gradient-to-br from-pink-50 to-white p-6 rounded-2xl border border-pink-200">
+          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
+            Schedule & Status
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-3">Start Date</label>
+              <input
+                type="datetime-local"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all bg-white"
+                value={formData.startDate}
+                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-3">End Date</label>
+              <input
+                type="datetime-local"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all bg-white"
+                value={formData.endDate}
+                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-3">Display Order</label>
+              <input
+                type="number"
+                min="0"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all bg-white"
+                value={formData.order}
+                onChange={(e) => setFormData({ ...formData, order: e.target.value })}
+              />
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-gray-200">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  className="w-5 h-5 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+                />
+                <label htmlFor="isActive" className="text-sm font-semibold text-gray-800">
+                  Active Banner
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 ml-8 mt-1">Make this banner visible to customers</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-4">
+          <button
+            type="button"
+            onClick={closeModal}
+            className="px-8 py-4 text-gray-700 bg-gray-100 rounded-2xl hover:bg-gray-200 font-semibold transition-all duration-200 hover:scale-[0.98]"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-8 py-4 bg-gradient-to-r from-rose-600 to-pink-600 text-white rounded-2xl hover:from-rose-700 hover:to-pink-700 disabled:opacity-50 flex items-center gap-3 font-semibold transition-all duration-200 hover:scale-[0.98] shadow-lg shadow-rose-200"
+          >
+            {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+            <span>{editingItem ? 'Update' : 'Create'} Banner</span>
+          </button>
+        </div>
+      </form>
+    );
+  };
+  const OfferForm = () => {
     const [formData, setFormData] = useState({
       title: editingItem?.title || '',
       description: editingItem?.description || '',
@@ -2286,82 +2281,82 @@ const OfferForm = () => {
     );
   };
   const OfferFilters = () => {
-     const [filters, setFilters] = useState({
-    featured: null, // Use null instead of '' to indicate no filter
-    type: '', // Keep as empty string for "All Types", but handle in loadOffers
-    page: 1,
-    limit: 20,
-  });
-const handleFilterChange = (key, value) => {
-    const newFilters = { ...filters, [key]: value, page: 1 };
-    setFilters(newFilters);
+    const [filters, setFilters] = useState({
+      featured: null, // Use null instead of '' to indicate no filter
+      type: '', // Keep as empty string for "All Types", but handle in loadOffers
+      page: 1,
+      limit: 20,
+    });
+    const handleFilterChange = (key, value) => {
+      const newFilters = { ...filters, [key]: value, page: 1 };
+      setFilters(newFilters);
 
-    // Prepare query params, omitting invalid or empty values
-    const queryParams = {
-      page: newFilters.page,
-      limit: newFilters.limit,
+      // Prepare query params, omitting invalid or empty values
+      const queryParams = {
+        page: newFilters.page,
+        limit: newFilters.limit,
+      };
+      if (newFilters.featured !== null) {
+        queryParams.featured = newFilters.featured; // Only include if true or false
+      }
+      if (newFilters.type) {
+        queryParams.type = newFilters.type; // Only include if a valid type is selected
+      }
+
+      loadOffers(queryParams);
     };
-    if (newFilters.featured !== null) {
-      queryParams.featured = newFilters.featured; // Only include if true or false
-    }
-    if (newFilters.type) {
-      queryParams.type = newFilters.type; // Only include if a valid type is selected
-    }
-
-    loadOffers(queryParams);
-  };
 
 
     return (
-   <div className="mb-6 p-4 bg-white rounded-2xl shadow-lg border border-gray-100 flex items-center gap-4">
-      <div className="flex items-center gap-2">
-        <Filter className="w-5 h-5 text-gray-600" />
-        <span className="text-sm font-semibold text-gray-800">Filters</span>
-      </div>
-      <select
-        className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        value={filters.featured === null ? '' : filters.featured}
-        onChange={(e) => handleFilterChange('featured', e.target.value === '' ? null : e.target.value === 'true')}
-      >
-        <option value="">All Offers</option>
-        <option value="true">Featured Only</option>
-        <option value="false">Non-Featured</option>
-      </select>
-      <select
-        className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        value={filters.type}
-        onChange={(e) => handleFilterChange('type', e.target.value)}
-      >
-        <option value="">All Types</option>
-        <option value="percentage">Percentage</option>
-        <option value="fixed-amount">Fixed Amount</option>
-        <option value="buy-one-get-one">Buy One Get One</option>
-        <option value="free-delivery">Free Delivery</option>
-        <option value="combo">Combo</option>
-      </select>
-      <div className="ml-auto flex gap-2">
-        <button
-          onClick={() => handleFilterChange('page', Math.max(1, filters.page - 1))}
-          disabled={filters.page === 1}
-          className="px-4 py-2 bg-gray-100 rounded-xl disabled:opacity-50"
+      <div className="mb-6 p-4 bg-white rounded-2xl shadow-lg border border-gray-100 flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Filter className="w-5 h-5 text-gray-600" />
+          <span className="text-sm font-semibold text-gray-800">Filters</span>
+        </div>
+        <select
+          className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          value={filters.featured === null ? '' : filters.featured}
+          onChange={(e) => handleFilterChange('featured', e.target.value === '' ? null : e.target.value === 'true')}
         >
-          Previous
-        </button>
-        <span className="px-4 py-2 text-sm font-medium text-gray-600">
-          Page {pagination.currentPage} of {pagination.totalPages}
-        </span>
-        <button
-          onClick={() => handleFilterChange('page', filters.page + 1)}
-          disabled={filters.page === pagination.totalPages}
-          className="px-4 py-2 bg-gray-100 rounded-xl disabled:opacity-50"
+          <option value="">All Offers</option>
+          <option value="true">Featured Only</option>
+          <option value="false">Non-Featured</option>
+        </select>
+        <select
+          className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          value={filters.type}
+          onChange={(e) => handleFilterChange('type', e.target.value)}
         >
-          Next
-        </button>
+          <option value="">All Types</option>
+          <option value="percentage">Percentage</option>
+          <option value="fixed-amount">Fixed Amount</option>
+          <option value="buy-one-get-one">Buy One Get One</option>
+          <option value="free-delivery">Free Delivery</option>
+          <option value="combo">Combo</option>
+        </select>
+        <div className="ml-auto flex gap-2">
+          <button
+            onClick={() => handleFilterChange('page', Math.max(1, filters.page - 1))}
+            disabled={filters.page === 1}
+            className="px-4 py-2 bg-gray-100 rounded-xl disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span className="px-4 py-2 text-sm font-medium text-gray-600">
+            Page {pagination.currentPage} of {pagination.totalPages}
+          </span>
+          <button
+            onClick={() => handleFilterChange('page', filters.page + 1)}
+            disabled={filters.page === pagination.totalPages}
+            className="px-4 py-2 bg-gray-100 rounded-xl disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
       </div>
-    </div>
     );
   };
- const ApplyOfferForm = () => {
+  const ApplyOfferForm = () => {
     const [selectedItems, setSelectedItems] = useState(editingItem?.appliedToItems?.map(item => item._id) || []);
 
     const handleApply = async () => {
@@ -2501,7 +2496,7 @@ const handleFilterChange = (key, value) => {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-semibold text-gray-800 mb-3">Payment Gateway</label>
-              <select 
+              <select
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
                 value={formData.paymentGateway}
                 onChange={(e) => setFormData({ ...formData, paymentGateway: e.target.value })}
@@ -2537,7 +2532,7 @@ const handleFilterChange = (key, value) => {
         </div>
 
         <div className="flex justify-end">
-          <button 
+          <button
             type="submit"
             disabled={loading}
             className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 flex items-center gap-3 font-semibold transition-all duration-200 hover:scale-[0.98] shadow-lg shadow-blue-200"
@@ -2607,7 +2602,7 @@ const handleFilterChange = (key, value) => {
             {data.filter(item => {
               if (!searchTerm) return true;
               const searchableFields = ['name', 'title', 'orderNumber', 'email'];
-              return searchableFields.some(field => 
+              return searchableFields.some(field =>
                 item[field]?.toLowerCase().includes(searchTerm.toLowerCase())
               );
             }).map((item, index) => (
@@ -2652,31 +2647,31 @@ const handleFilterChange = (key, value) => {
           </tbody>
         </table>
         {pagination.totalPages > 1 && (
-      <div className="p-6 border-t border-gray-100 flex items-center justify-between">
-        <p className="text-sm text-gray-600">
-          Showing {data.length} of {pagination.totalOffers} offers
-        </p>
-        <div className="flex items-center gap-4">
-          <button
-            disabled={pagination.currentPage === 1}
-            onClick={() => loadOffers({ page: pagination.currentPage - 1 })}
-            className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl disabled:opacity-50 hover:bg-gray-200"
-          >
-            Previous
-          </button>
-          <span className="text-sm font-semibold text-gray-900">
-            Page {pagination.currentPage} of {pagination.totalPages}
-          </span>
-          <button
-            disabled={pagination.currentPage === pagination.totalPages}
-            onClick={() => loadOffers({ page: pagination.currentPage + 1 })}
-            className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl disabled:opacity-50 hover:bg-gray-200"
-          >
-            Next
-          </button>
-        </div>
-      </div>
-    )}
+          <div className="p-6 border-t border-gray-100 flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              Showing {data.length} of {pagination.totalOffers} offers
+            </p>
+            <div className="flex items-center gap-4">
+              <button
+                disabled={pagination.currentPage === 1}
+                onClick={() => loadOffers({ page: pagination.currentPage - 1 })}
+                className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl disabled:opacity-50 hover:bg-gray-200"
+              >
+                Previous
+              </button>
+              <span className="text-sm font-semibold text-gray-900">
+                Page {pagination.currentPage} of {pagination.totalPages}
+              </span>
+              <button
+                disabled={pagination.currentPage === pagination.totalPages}
+                onClick={() => loadOffers({ page: pagination.currentPage + 1 })}
+                className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl disabled:opacity-50 hover:bg-gray-200"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
         {data.length === 0 && (
           <div className="text-center py-20 text-gray-500">
             <div className="text-6xl mb-4">📦</div>
@@ -2703,7 +2698,7 @@ const handleFilterChange = (key, value) => {
                   <h2 className="text-2xl font-bold text-gray-900">Recent Orders</h2>
                   <p className="text-sm text-gray-600 mt-1">Latest customer orders</p>
                 </div>
-                <button 
+                <button
                   onClick={() => setActiveTab('orders')}
                   className="text-blue-600 hover:text-blue-800 font-semibold text-sm flex items-center gap-2 hover:bg-blue-50 px-4 py-2 rounded-xl transition-all"
                 >
@@ -2754,22 +2749,22 @@ const handleFilterChange = (key, value) => {
                   action: () => setActiveTab('categories')
                 },
                 {
-                  title: 'View Orders', 
+                  title: 'View Orders',
                   description: 'Manage customer orders',
                   icon: ShoppingBag,
                   gradient: 'from-blue-500 to-cyan-600',
                   action: () => setActiveTab('orders')
                 },
-                 {
-    title: 'Manage Banners',
-    description: 'Control promotional banners',
-    icon: ImageIcon,
-    gradient: 'from-rose-500 to-pink-600',
-    action: () => setActiveTab('banners')
-  },
+                {
+                  title: 'Manage Banners',
+                  description: 'Control promotional banners',
+                  icon: ImageIcon,
+                  gradient: 'from-rose-500 to-pink-600',
+                  action: () => setActiveTab('banners')
+                },
                 {
                   title: 'Create Offers',
-                  description: 'Manage promotions and deals', 
+                  description: 'Manage promotions and deals',
                   icon: Percent,
                   gradient: 'from-purple-500 to-pink-600',
                   action: () => setActiveTab('offers')
@@ -2805,16 +2800,16 @@ const handleFilterChange = (key, value) => {
                 key: 'imageUrl',
                 render: (item) => (
                   <div className="relative">
-                    <img 
-                      src={item.imageUrl} 
-                      alt={item.name} 
-                      className="w-20 h-16 object-cover rounded-2xl border-2 border-gray-100" 
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="w-20 h-16 object-cover rounded-2xl border-2 border-gray-100"
                     />
                   </div>
                 ),
               },
-              { 
-                header: 'Name', 
+              {
+                header: 'Name',
                 key: 'name',
                 render: (item) => (
                   <div>
@@ -2842,9 +2837,8 @@ const handleFilterChange = (key, value) => {
                 key: 'isActive',
                 render: (item) => (
                   <span
-                    className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${
-                      item.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
-                    }`}
+                    className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${item.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
+                      }`}
                   >
                     {item.isActive ? 'Active' : 'Inactive'}
                   </span>
@@ -2853,98 +2847,97 @@ const handleFilterChange = (key, value) => {
             ]}
           />
         );
-case 'banners':
-  return (
-    <DataGrid
-    data={banners}
-  title="Banners"
-  onEdit={(item) => openModal('banner', item)}
-  onDelete={handleDelete}
-  onAdd={() => openModal('banner')}
-      columns={[
-        {
-          header: 'Image',
-          key: 'imageUrl',
-          render: (item) => (
-            <div className="relative">
-              <img 
-                src={item.imageUrl} 
-                alt={item.title} 
-                className="w-32 h-16 object-cover rounded-2xl border-2 border-gray-100" 
-              />
-            </div>
-          ),
-        },
-        {
-          header: 'Title',
-          key: 'title',
-          render: (item) => (
-            <div>
-              <p className="font-bold text-gray-900">{item.title}</p>
-              {item.description && <p className="text-xs text-gray-500">{item.description}</p>}
-            </div>
-          ),
-        },
-        {
-          header: 'Category',
-          key: 'category',
-          render: (item) => (
-            <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold border border-blue-200">
-              {item.category?.name || item.category || 'None'}
-            </span>
-          ),
-        },
-        {
-          header: 'Order',
-          key: 'order',
-          render: (item) => (
-            <span className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-xs font-semibold">
-              {item.order || 0}
-            </span>
-          ),
-        },
-        {
-          header: 'Schedule',
-          key: 'schedule',
-          render: (item) => (
-            <div className="text-sm">
-              <p className="text-gray-900">{item.startDate ? formatDate(item.startDate) : 'No start date'}</p>
-              <p className="text-xs text-gray-500">to {item.endDate ? formatDate(item.endDate) : 'No end date'}</p>
-            </div>
-          ),
-        },
-        {
-          header: 'Status',
-          key: 'isActive',
-          render: (item) => (
-            <span
-              className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${
-                item.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
-              }`}
-            >
-              {item.isActive ? 'Active' : 'Inactive'}
-            </span>
-          ),
-        },
-      ]}
-      actions={[
-        {
-          icon: RefreshCw,
-          label: 'Toggle Status',
-          color: 'purple',
-          onClick: async (item) => {
-            try {
-              await apiService.toggleBannerStatus(item._id);
-              showNotificationDialog('Success!', 'Banner status updated successfully');
-              loadData();
-            } catch (error) {
-              showNotificationDialog('Error', 'Error updating banner status: ' + error.message, 'error');
-            }
-          },
-        },
-      ]}
-    />
-  );
+      case 'banners':
+        return (
+          <DataGrid
+            data={banners}
+            title="Banners"
+            onEdit={(item) => openModal('banner', item)}
+            onDelete={handleDelete}
+            onAdd={() => openModal('banner')}
+            columns={[
+              {
+                header: 'Image',
+                key: 'imageUrl',
+                render: (item) => (
+                  <div className="relative">
+                    <img
+                      src={item.imageUrl}
+                      alt={item.title}
+                      className="w-32 h-16 object-cover rounded-2xl border-2 border-gray-100"
+                    />
+                  </div>
+                ),
+              },
+              {
+                header: 'Title',
+                key: 'title',
+                render: (item) => (
+                  <div>
+                    <p className="font-bold text-gray-900">{item.title}</p>
+                    {item.description && <p className="text-xs text-gray-500">{item.description}</p>}
+                  </div>
+                ),
+              },
+              {
+                header: 'Category',
+                key: 'category',
+                render: (item) => (
+                  <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold border border-blue-200">
+                    {item.category?.name || item.category || 'None'}
+                  </span>
+                ),
+              },
+              {
+                header: 'Order',
+                key: 'order',
+                render: (item) => (
+                  <span className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-xs font-semibold">
+                    {item.order || 0}
+                  </span>
+                ),
+              },
+              {
+                header: 'Schedule',
+                key: 'schedule',
+                render: (item) => (
+                  <div className="text-sm">
+                    <p className="text-gray-900">{item.startDate ? formatDate(item.startDate) : 'No start date'}</p>
+                    <p className="text-xs text-gray-500">to {item.endDate ? formatDate(item.endDate) : 'No end date'}</p>
+                  </div>
+                ),
+              },
+              {
+                header: 'Status',
+                key: 'isActive',
+                render: (item) => (
+                  <span
+                    className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${item.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
+                      }`}
+                  >
+                    {item.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                ),
+              },
+            ]}
+            actions={[
+              {
+                icon: RefreshCw,
+                label: 'Toggle Status',
+                color: 'purple',
+                onClick: async (item) => {
+                  try {
+                    await apiService.toggleBannerStatus(item._id);
+                    showNotificationDialog('Success!', 'Banner status updated successfully');
+                    loadData();
+                  } catch (error) {
+                    showNotificationDialog('Error', 'Error updating banner status: ' + error.message, 'error');
+                  }
+                },
+              },
+            ]}
+          />
+        );
       case 'menu-items':
         return (
           <DataGrid
@@ -2959,16 +2952,16 @@ case 'banners':
                 key: 'imageUrl',
                 render: (item) => (
                   <div className="relative">
-                    <img 
-                      src={item.imageUrl} 
-                      alt={item.name} 
-                      className="w-20 h-16 object-cover rounded-2xl border-2 border-gray-100" 
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="w-20 h-16 object-cover rounded-2xl border-2 border-gray-100"
                     />
                   </div>
                 ),
               },
-              { 
-                header: 'Name', 
+              {
+                header: 'Name',
                 key: 'name',
                 render: (item) => (
                   <div>
@@ -2998,11 +2991,10 @@ case 'banners':
                 header: 'Stock',
                 key: 'stockQuantity',
                 render: (item) => (
-                  <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${
-                    item.stockQuantity > 10 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                    item.stockQuantity > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                    'bg-red-50 text-red-700 border-red-200'
-                  }`}>
+                  <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${item.stockQuantity > 10 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                      item.stockQuantity > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                        'bg-red-50 text-red-700 border-red-200'
+                    }`}>
                     {item.stockQuantity || 0}
                   </span>
                 ),
@@ -3012,9 +3004,8 @@ case 'banners':
                 key: 'status',
                 render: (item) => (
                   <div className="flex flex-col gap-2">
-                    <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${
-                      item.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
-                    }`}>
+                    <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${item.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
+                      }`}>
                       {item.isActive ? 'Active' : 'Inactive'}
                     </span>
                     <div className="flex gap-1">
@@ -3046,8 +3037,8 @@ case 'banners':
             ]}
           />
         );
-     
- case 'offers':
+
+      case 'offers':
         return (
           <div>
             <OfferFilters />
@@ -3055,7 +3046,7 @@ case 'banners':
               data={offers}
               title="Offers"
               onEdit={(item) => openModal('offer', item)}
-onDelete={handleDelete}
+              onDelete={handleDelete}
               onAdd={() => openModal('offer')}
               columns={[
                 {
@@ -3166,9 +3157,8 @@ onDelete={handleDelete}
                   render: (item) => (
                     <div className="flex flex-col gap-2">
                       <span
-                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${
-                          item.isValid ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
-                        }`}
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${item.isValid ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
+                          }`}
                       >
                         {item.isValid ? 'Active' : 'Inactive'}
                       </span>
@@ -3198,10 +3188,10 @@ onDelete={handleDelete}
             data={orders}
             title="Orders"
             onEdit={(item) => console.log('View order details', item._id)}
-            onDelete={() => {}}
+            onDelete={() => { }}
             columns={[
-              { 
-                header: 'Order #', 
+              {
+                header: 'Order #',
                 key: 'orderNumber',
                 render: (item) => (
                   <div>
@@ -3213,8 +3203,8 @@ onDelete={handleDelete}
                   </div>
                 )
               },
-              { 
-                header: 'Customer', 
+              {
+                header: 'Customer',
                 key: 'userId',
                 render: (item) => (
                   <div className="flex items-center gap-3">
@@ -3234,7 +3224,7 @@ onDelete={handleDelete}
                 render: (item) => (
                   <div className="max-w-xs">
                     <p className="text-sm text-gray-900 font-medium">
-                      {item.items?.slice(0, 2).map(orderItem => 
+                      {item.items?.slice(0, 2).map(orderItem =>
                         orderItem.foodItem?.name || 'Item'
                       ).join(', ')}
                       {item.items?.length > 2 && <span className="text-gray-500"> +{item.items.length - 2} more</span>}
@@ -3293,8 +3283,8 @@ onDelete={handleDelete}
 
       case 'settings':
         return (
-            <SettingsForm />
-        
+          <SettingsForm />
+
         );
 
       default:
@@ -3303,7 +3293,7 @@ onDelete={handleDelete}
   };
 
   // Get modal content based on type
- const getModalContent = () => {
+  const getModalContent = () => {
     const modalConfigs = {
       category: { title: `${editingItem ? 'Edit' : 'Add'} Category`, component: <CategoryForm />, size: 'max-w-4xl' },
       'menu-item': { title: `${editingItem ? 'Edit' : 'Add'} Menu Item`, component: <FoodItemForm />, size: 'max-w-6xl' },
@@ -3374,33 +3364,30 @@ onDelete={handleDelete}
           <div className="p-8">
             <div className="space-y-3">
               {navigationItems.map((item) => (
-        <button
-          key={item.id}
-          onClick={() => {
-            if (item.id === "offers") {
-              router.push("/offer"); // Navigate to /offers page
-            } else {
-              setActiveTab(item.id);
-            }
-          }}
-          className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-left transition-all duration-300 font-semibold ${
-            activeTab === item.id
-              ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg transform scale-[1.02]`
-              : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:scale-[1.01]"
-          }`}
-        >
-          <div
-            className={`p-2 rounded-xl ${
-              activeTab === item.id ? "bg-gray-900 bg-opacity-20" : "bg-gray-100"
-            }`}
-          >
-            <item.icon className="w-5 h-5" />
-          </div>
-          <span>{item.name}</span>
-        </button>
-      ))}
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    if (item.id === "offers") {
+                      router.push("/offer"); // Navigate to /offers page
+                    } else {
+                      setActiveTab(item.id);
+                    }
+                  }}
+                  className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-left transition-all duration-300 font-semibold ${activeTab === item.id
+                      ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg transform scale-[1.02]`
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:scale-[1.01]"
+                    }`}
+                >
+                  <div
+                    className={`p-2 rounded-xl ${activeTab === item.id ? "bg-gray-900 bg-opacity-20" : "bg-gray-100"
+                      }`}
+                  >
+                    <item.icon className="w-5 h-5" />
+                  </div>
+                  <span>{item.name}</span>
+                </button>
+              ))}
             </div>
-      
           </div>
         </nav>
         <main className="flex-1 p-8 overflow-auto">
