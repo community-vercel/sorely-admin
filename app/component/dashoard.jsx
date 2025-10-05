@@ -1113,7 +1113,8 @@ const RestaurantAdminDashboard = () => {
       defaultItem: () => ({ name: '', additionalPrice: 0 }),
       fields: [
         { key: 'name', label: 'Size Name', type: 'text', placeholder: 'e.g., Large, Family Size' },
-        { key: 'additionalPrice', label: 'Additional Price', type: 'number' }
+        { key: 'additionalPrice', label: 'Price', type: 'number',  placeholder: 'For default, keep price 0 (main price already applies)',
+ }
       ]
     };
 
@@ -1133,7 +1134,11 @@ const RestaurantAdminDashboard = () => {
         { key: 'imageUrl', label: 'Image', type: 'image' }
       ]
     };
-
+const currentTime = Date.now();
+setFormData({
+  sku: `SKU-${currentTime}`,
+  barcode: `BC-${currentTime}`,
+});
     const handleSubmit = (e) => {
       e.preventDefault();
       const submitData = {
