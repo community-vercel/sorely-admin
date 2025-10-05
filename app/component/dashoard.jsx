@@ -39,7 +39,7 @@ import {
 import { useRouter } from "next/navigation";
 
 // API Configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://soleybackend.vercel.app/api/v1';
+const API_BASE_URL =  'https://soleybackend.vercel.app/api/v1';
 
 // API Service Class
 class ApiService {
@@ -1134,11 +1134,7 @@ const RestaurantAdminDashboard = () => {
         { key: 'imageUrl', label: 'Image', type: 'image' }
       ]
     };
-const currentTime = Date.now();
-setFormData({
-  sku: `SKU-${currentTime}`,
-  barcode: `BC-${currentTime}`,
-});
+
     const handleSubmit = (e) => {
       e.preventDefault();
       const submitData = {
@@ -1157,6 +1153,16 @@ setFormData({
       };
       handleSave(submitData, 'menu-item');
     };
+useEffect(() => {
+  if (!editingItem) {
+    const currentTime = Date.now();
+    setFormData(prev => ({
+      ...prev,
+      sku: `SKU-${currentTime}`,
+      barcode: `BC-${currentTime}`,
+    }));
+  }
+}, [editingItem]);
 
     return (
       <form onSubmit={handleSubmit} className="space-y-8">
@@ -1475,7 +1481,7 @@ setFormData({
             Nutrition Information (per serving)
           </h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Object.keys(formData.nutrition).map((key) => (
+            {Object?.keys(formData?.nutrition)?.map((key) => (
               <div key={key} className="bg-white p-4 rounded-xl border border-gray-200">
                 <label className="block text-xs font-bold text-gray-700 mb-2 capitalize">
                   {key === 'calories' ? 'Calories' : `${key} (g)`}
