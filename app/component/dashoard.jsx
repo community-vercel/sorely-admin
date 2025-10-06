@@ -2142,11 +2142,25 @@ useEffect(() => {
   };
 
   // Enhanced Data Grid Component
- const DataGrid = ({ data, title, columns, actions, pagination, onPageChange }) => {
+ const DataGrid = ({ data, title, columns,onEdit,onDelete, actions,onAdd, pagination, onPageChange }) => {
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-      {/* Table rendering */}
+     
+         <div className="flex justify-between items-center mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+            <p className="text-sm text-gray-600 mt-1">Manage your {title.toLowerCase()}</p>
+          </div>
+          {onAdd && (
+            <button
+              onClick={() => onAdd()}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-2xl hover:from-blue-700 hover:to-indigo-700 flex items-center gap-3 transition-all duration-200 hover:scale-[0.98] shadow-lg shadow-blue-200 font-semibold"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Add {title.slice(0, -1)}</span>
+            </button>
+          )}
+        </div>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
@@ -2167,19 +2181,36 @@ useEffect(() => {
                     {col.render ? col.render(item) : item[col.key]}
                   </td>
                 ))}
-                {actions.length > 0 && (
-                  <td className="px-4 py-4 text-right">
-                    {actions.map((action, index) => (
+               <td className="px-8 py-6 text-right">
+                  <div className="flex items-center gap-2 justify-end">
+                    {actions && actions.map((action, actionIndex) => (
                       <button
-                        key={index}
+                        key={actionIndex}
                         onClick={() => action.onClick(item)}
-                        className={`text-${action.color}-600 hover:text-${action.color}-800 p-2`}
+                        className={`p-2 rounded-xl hover:bg-${action.color}-50 transition-all duration-200 text-${action.color}-600 hover:text-${action.color}-900 hover:scale-110`}
+                        title={action.label}
                       >
-                        <action.icon className="w-5 h-5" />
+                        <action.icon className="w-4 h-4" />
                       </button>
                     ))}
-                  </td>
-                )}
+                    <button
+                      onClick={() => onEdit(item)}
+                      className="p-2 rounded-xl text-blue-600 hover:text-blue-900 hover:bg-blue-50 transition-all duration-200 hover:scale-110"
+                      title="Edit"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    {onDelete && (
+                      <button
+                        onClick={() => onDelete(item._id || item.id, title.toLowerCase().slice(0, -1))}
+                        className="p-2 rounded-xl text-red-600 hover:text-red-900 hover:bg-red-50 transition-all duration-200 hover:scale-110"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
