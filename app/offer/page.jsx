@@ -102,7 +102,7 @@ class ApiService {
 
   async getFoodItems(params = {}) {
     const queryString = new URLSearchParams(params).toString();
-    return this.request(`/food-items${queryString ? `?${queryString}` : ''}`);
+    return this.request(`/food-items/getallitems${queryString ? `?${queryString}` : ''}`);
   }
 
   async getOffers(params = {}) {

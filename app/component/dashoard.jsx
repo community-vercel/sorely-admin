@@ -23,6 +23,7 @@ import {
   Loader2,
   Save,
   Eye,
+  MessageSquare,
   Image as ImageIcon,
   Check,
   AlertTriangle,
@@ -35,11 +36,12 @@ import {
   Clock,
   MapPin,
   Phone,
+  Euro,
 } from 'lucide-react';
 import { useRouter } from "next/navigation";
 
 // API Configuration
-const API_BASE_URL =  'https://soleybackend.vercel.app/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://soleybackend.vercel.app/api/v1';
 
 // API Service Class
 class ApiService {
@@ -173,46 +175,7 @@ class ApiService {
       method: 'DELETE',
     });
   }
-
-  // Food Items API
-  async getFoodItems(params = {}) {
-    const queryString = new URLSearchParams(params).toString();
-    return this.request(`/food-items${queryString ? `?${queryString}` : ''}`);
-  }
-
-  async getFoodItem(id) {
-    return this.request(`/food-items/${id}`);
-  }
-
-  async createFoodItem(data) {
-    return this.request('/food-items', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async updateFoodItem(id, data) {
-    return this.request(`/food-items/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async deleteFoodItem(id) {
-    console.log("checking", id)
-    return this.request(`/food-items/${id}`, {
-      method: 'DELETE',
-    });
-  }
-
-  async updateStock(id, quantity, operation) {
-    return this.request(`/food-items/${id}/stock`, {
-      method: 'PATCH',
-      body: JSON.stringify({ quantity, operation }),
-    });
-  }
-
-  // Offers API
+// Offers API
   // Offers API
   async getOffers(params = {}) {
     const queryString = new URLSearchParams(params).toString();
@@ -257,11 +220,50 @@ class ApiService {
     });
   }
 
-  // Orders API
-  async getOrders(params = {}) {
+  // Food Items API
+  async getFoodItems(params = {}) {
     const queryString = new URLSearchParams(params).toString();
-    return this.request(`/orders/getall${queryString ? `?${queryString}` : ''}`);
+    return this.request(`/food-items/getallitems${queryString ? `?${queryString}` : ''}`);
   }
+
+  async getFoodItem(id) {
+    return this.request(`/food-items/${id}`);
+  }
+
+  async createFoodItem(data) {
+    return this.request('/food-items', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateFoodItem(id, data) {
+    return this.request(`/food-items/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteFoodItem(id) {
+    console.log("checking", id)
+    return this.request(`/food-items/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async updateStock(id, quantity, operation) {
+    return this.request(`/food-items/${id}/stock`, {
+      method: 'PATCH',
+      body: JSON.stringify({ quantity, operation }),
+    });
+  }
+
+  
+  // Orders API
+ async getOrders(params = {}) {
+  const queryString = new URLSearchParams(params).toString();
+  return this.request(`/orders/getall${queryString ? `?${queryString}` : ''}`);
+}
 
   async updateOrderStatus(id, status, message) {
     return this.request(`/orders/${id}/status`, {
@@ -520,6 +522,33 @@ const ImageUpload = ({ value, onChange, className = "", multiple = false }) => {
     </div>
   );
 };
+const Pagination = ({ pagination, onPageChange }) => {
+  const { currentPage, totalPages } = pagination;
+
+  if (totalPages <= 1) return null; // Optionally hide for single page
+
+  return (
+    <div className="flex justify-center items-center gap-2 mt-4">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="px-3 py-2 bg-gray-100 rounded-lg disabled:opacity-50"
+      >
+        Previous
+      </button>
+      <span className="text-sm font-medium">
+        Page {currentPage} of {totalPages}
+      </span>
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="px-3 py-2 bg-gray-100 rounded-lg disabled:opacity-50"
+      >
+        Next
+      </button>
+    </div>
+  );
+};
 
 // Dynamic Form Array Component
 const FormArrayField = ({ items, onChange, fieldConfig, title }) => {
@@ -643,17 +672,15 @@ const RestaurantAdminDashboard = () => {
     apiKey: '',
     secretKey: '',
   });
-  const [pagination, setPagination] = useState({
+const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
     totalOffers: 0,
   });
-
-  const [offerStats, setOfferStats] = useState({
-    activeOffers: 0,
-    featuredOffers: 0,
-    itemsWithOffers: 0,
-    totalSavings: 0
+  const [orderPagination, setOrderPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalOrders: 0,
   });
   useEffect(() => {
     if (activeTab === 'menu-items') {
@@ -723,6 +750,7 @@ const RestaurantAdminDashboard = () => {
         apiService.getOffers({ limit: 5 }).catch(() => ({ offers: [] })),
       ]);
 
+      
       setDashboardStats({
         revenue: { current: statsResponse.stats?.totalRevenue || 45250.75, growth: 15.3, period: 'month' },
         orders: { current: statsResponse.stats?.totalOrders || 2847, growth: 12.8, period: 'week' },
@@ -730,7 +758,7 @@ const RestaurantAdminDashboard = () => {
         menuItems: { current: itemsResponse.count || 68, growth: 5.2, period: 'month' },
         activeOffers: { current: offersResponse.totalOffers || 0, growth: 10, period: 'month' },
       });
-
+console.log("statsResponse",statsResponse)
       setOrders(ordersResponse.orders || []);
       setOffers(offersResponse.offers || []);
     } catch (error) {
@@ -742,11 +770,28 @@ const RestaurantAdminDashboard = () => {
     setCategories(response.categories || []);
   };
 
-  const loadFoodItems = async (params = {}) => {
-    const response = await apiService.getFoodItems(params);
+const loadFoodItems = async (params = {}) => {
+  setLoading(true);
+  try {
+    const queryParams = {
+      page: params.page || foodItemsPagination.currentPage,
+      limit: params.limit || 10,
+      search: params.search || searchTerm,
+      includeInactive: true // For admin dashboard
+    };
+    const response = await apiService.getFoodItems(queryParams);
     setFoodItems(response.items || []);
-  };
-
+    setFoodItemsPagination({
+      currentPage: response.currentPage || 1,
+      totalPages: response.totalPages || Math.ceil(response.count / (queryParams.limit || 10)),
+      totalItems: response.totalItems || response.count,
+    });
+  } catch (error) {
+    showNotificationDialog('Error', 'Error loading menu items: ' + error.message, 'error');
+  } finally {
+    setLoading(false);
+  }
+};
   const loadOffers = async (params = {}) => {
     setLoading(true);
     try {
@@ -779,10 +824,26 @@ const RestaurantAdminDashboard = () => {
     const response = await apiService.getBanners(params);
     setBanners(response.data || []);
   };
-  const loadOrders = async () => {
-    const response = await apiService.getOrders();
+ const loadOrders = async (params = {}) => {
+  setLoading(true);
+  try {
+    const queryParams = {
+      page: params.page || 1,
+      limit: params.limit || 10,
+    };
+    const response = await apiService.getOrders(queryParams);
     setOrders(response.orders || []);
-  };
+    setOrderPagination({
+      currentPage: response.currentPage,
+      totalPages: response.totalPages,
+      totalOrders: response.totalOrders,
+    });
+  } catch (error) {
+    showNotificationDialog('Error', 'Error loading orders: ' + error.message, 'error');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const loadSettings = async () => {
     try {
@@ -802,12 +863,13 @@ const RestaurantAdminDashboard = () => {
   };
 
   // Utility functions
-  const formatCurrency = useCallback((amount, currency = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount);
-  }, []);
+const formatCurrency = useCallback((amount, currency = 'EUR') => {
+  if (isNaN(amount)) return '€0.00'; // handle invalid input gracefully
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+  }).format(amount);
+}, []);
 
   const formatDate = useCallback((dateString) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -937,15 +999,22 @@ const RestaurantAdminDashboard = () => {
   const router = useRouter();
 
   // Navigation items
+const [foodItemsPagination, setFoodItemsPagination] = useState({
+  currentPage: 1,
+  totalPages: 1,
+  totalItems: 0,
+});
   const navigationItems = [
     { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, gradient: 'from-blue-500 to-indigo-600' },
     { id: 'categories', name: 'Categories', icon: Grid3X3, gradient: 'from-emerald-500 to-teal-600' },
     { id: 'menu-items', name: 'Menu Items', icon: MenuIcon, gradient: 'from-orange-500 to-red-600' },
     { id: 'offers', name: 'Offers', icon: Percent, gradient: 'from-purple-500 to-pink-600' },
     { id: 'orders', name: 'Orders', icon: ShoppingBag, gradient: 'from-cyan-500 to-blue-600' },
-    { id: 'banners', name: 'Banners', icon: ImageIcon, gradient: 'from-rose-500 to-pink-600' }, // New banner navigation item
+    { id: 'contact', name: 'Contact Us', icon: MessageSquare, gradient: 'from-rose-500 to-pink-600' },
+    { id: 'banners', name: 'Banners', icon: ImageIcon, gradient: 'from-indigo-500 to-purple-600' },
     { id: 'settings', name: 'Settings', icon: Settings, gradient: 'from-gray-500 to-gray-700' },
   ];
+
   // Enhanced Dashboard Stats Component
   const DashboardStats = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
@@ -954,7 +1023,7 @@ const RestaurantAdminDashboard = () => {
           title: 'Total Revenue',
           value: formatCurrency(dashboardStats.revenue.current),
           growth: `+${dashboardStats.revenue.growth}%`,
-          icon: DollarSign,
+          icon: Euro,
           gradient: 'from-emerald-500 to-emerald-600',
           bgGradient: 'from-emerald-50 to-emerald-100',
           iconBg: 'bg-emerald-500',
@@ -1955,492 +2024,7 @@ useEffect(() => {
       </form>
     );
   };
-  const OfferForm = () => {
-    const [formData, setFormData] = useState({
-      title: editingItem?.title || '',
-      description: editingItem?.description || '',
-      subtitle: editingItem?.subtitle || '',
-      imageUrl: editingItem?.imageUrl || '',
-      bannerColor: editingItem?.bannerColor || '#E91E63',
-      type: editingItem?.type || 'percentage',
-      value: editingItem?.value || 0,
-      minOrderAmount: editingItem?.minOrderAmount || 0,
-      maxDiscountAmount: editingItem?.maxDiscountAmount || 0,
-      usageLimit: editingItem?.usageLimit || '',
-      userUsageLimit: editingItem?.userUsageLimit || 1,
-      appliedToCategories: editingItem?.appliedToCategories?.map(cat => cat._id) || [],
-      appliedToItems: editingItem?.appliedToItems?.map(item => item._id) || [],
-      deliveryTypes: editingItem?.deliveryTypes || [],
-      isActive: editingItem?.isActive !== false,
-      isFeatured: editingItem?.isFeatured || false,
-      startDate: editingItem?.startDate ? new Date(editingItem.startDate).toISOString().slice(0, 16) : '',
-      endDate: editingItem?.endDate ? new Date(editingItem.endDate).toISOString().slice(0, 16) : '',
-      priority: editingItem?.priority || 1,
-      termsAndConditions: editingItem?.termsAndConditions?.join('\n') || '',
-    });
 
-    const handleSubmit = (e) => {
-      e.preventDefault();
-      const submitData = {
-        ...formData,
-        termsAndConditions: formData.termsAndConditions.split('\n').map(t => t.trim()).filter(t => t),
-        value: formData.value ? parseFloat(formData.value) : undefined,
-        minOrderAmount: parseFloat(formData.minOrderAmount) || 0,
-        maxDiscountAmount: formData.maxDiscountAmount ? parseFloat(formData.maxDiscountAmount) : undefined,
-        usageLimit: formData.usageLimit ? parseInt(formData.usageLimit) : null,
-        userUsageLimit: parseInt(formData.userUsageLimit) || 1,
-        priority: parseInt(formData.priority) || 1,
-        startDate: formData.startDate ? new Date(formData.startDate).toISOString() : undefined,
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : undefined,
-      };
-      handleSave(submitData, 'offer');
-    };
-
-    return (
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="bg-gradient-to-br from-gray-50 to-white p-6 rounded-2xl border border-gray-200">
-          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            Basic Information
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Title *</label>
-              <input
-                type="text"
-                required
-                maxLength={200}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Enter offer title"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Subtitle</label>
-              <input
-                type="text"
-                maxLength={100}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-                value={formData.subtitle}
-                onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
-                placeholder="Enter offer subtitle"
-              />
-            </div>
-          </div>
-          <div className="mt-6">
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Description *</label>
-            <textarea
-              rows="4"
-              required
-              maxLength={1000}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none bg-white"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Offer description"
-            />
-          </div>
-          <div className="mt-6">
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Image *</label>
-            <ImageUpload
-              value={formData.imageUrl}
-              onChange={(url) => setFormData({ ...formData, imageUrl: url })}
-            />
-          </div>
-          <div className="mt-6">
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Banner Color</label>
-            <input
-              type="color"
-              className="w-full h-12 border border-gray-200 rounded-xl"
-              value={formData.bannerColor}
-              onChange={(e) => setFormData({ ...formData, bannerColor: e.target.value })}
-            />
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-50 to-white p-6 rounded-2xl border border-purple-200">
-          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-            Offer Details
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Type *</label>
-              <select
-                required
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value, value: 0 })}
-              >
-                <option value="percentage">Percentage</option>
-                <option value="fixed-amount">Fixed Amount</option>
-                <option value="buy-one-get-one">Buy One Get One</option>
-                <option value="free-delivery">Free Delivery</option>
-                <option value="combo">Combo</option>
-              </select>
-            </div>
-            {['percentage', 'fixed-amount'].includes(formData.type) && (
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-3">Value *</label>
-                <input
-                  type="number"
-                  min="0"
-                  step={formData.type === 'percentage' ? '1' : '0.01'}
-                  required
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
-                  value={formData.value}
-                  onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) || 0 })}
-                  placeholder={formData.type === 'percentage' ? 'e.g., 10 for 10%' : 'e.g., 5 for $5 off'}
-                />
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Minimum Order Amount</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
-                value={formData.minOrderAmount}
-                onChange={(e) => setFormData({ ...formData, minOrderAmount: parseFloat(e.target.value) || 0 })}
-                placeholder="e.g., 20"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Maximum Discount Amount</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
-                value={formData.maxDiscountAmount}
-                onChange={(e) => setFormData({ ...formData, maxDiscountAmount: parseFloat(e.target.value) || 0 })}
-                placeholder="e.g., 50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Usage Limit</label>
-              <input
-                type="number"
-                min="1"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
-                value={formData.usageLimit}
-                onChange={(e) => setFormData({ ...formData, usageLimit: parseInt(e.target.value) || '' })}
-                placeholder="Leave empty for unlimited"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">User Usage Limit</label>
-              <input
-                type="number"
-                min="1"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
-                value={formData.userUsageLimit}
-                onChange={(e) => setFormData({ ...formData, userUsageLimit: parseInt(e.target.value) || 1 })}
-                placeholder="e.g., 1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Priority</label>
-              <input
-                type="number"
-                min="1"
-                max="10"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
-                value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) || 1 })}
-                placeholder="1 to 10"
-              />
-            </div>
-          </div>
-          <div className="mt-6">
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Start Date *</label>
-            <input
-              type="datetime-local"
-              required
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
-              value={formData.startDate}
-              onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-            />
-          </div>
-          <div className="mt-6">
-            <label className="block text-sm font-semibold text-gray-800 mb-3">End Date *</label>
-            <input
-              type="datetime-local"
-              required
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
-              value={formData.endDate}
-              onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-            />
-          </div>
-          <div className="mt-6">
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Terms and Conditions</label>
-            <textarea
-              rows="4"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all resize-none bg-white"
-              value={formData.termsAndConditions}
-              onChange={(e) => setFormData({ ...formData, termsAndConditions: e.target.value })}
-              placeholder="Enter terms, one per line"
-            />
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-2xl border border-blue-200">
-          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            Applicability
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Categories</label>
-              {categories.length === 0 ? (
-                <p className="text-sm text-red-600">No categories available. Please add categories first.</p>
-              ) : (
-                <select
-                  multiple
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-                  value={formData.appliedToCategories}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    appliedToCategories: Array.from(e.target.selectedOptions, option => option.value),
-                  })}
-                >
-                  {categories.map((cat) => (
-                    <option key={cat._id} value={cat._id}>{cat.name}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Items</label>
-              {foodItems.length === 0 ? (
-                <p className="text-sm text-red-600">No items available. Please add items first.</p>
-              ) : (
-                <select
-                  multiple
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-                  value={formData.appliedToItems}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    appliedToItems: Array.from(e.target.selectedOptions, option => option.value),
-                  })}
-                >
-                  {foodItems.map((item) => (
-                    <option key={item._id} value={item._id}>{item.name}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Delivery Types</label>
-              <select
-                multiple
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-                value={formData.deliveryTypes}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  deliveryTypes: Array.from(e.target.selectedOptions, option => option.value),
-                })}
-              >
-                <option value="pickup">Pickup</option>
-              </select>
-            </div>
-          </div>
-          <div className="mt-6 grid grid-cols-2 gap-6">
-            <div>
-              <label className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={formData.isActive}
-                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                  className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                />
-                <span className="text-sm font-semibold text-gray-800">Active</span>
-              </label>
-            </div>
-            <div>
-              <label className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={formData.isFeatured}
-                  onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
-                  className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                />
-                <span className="text-sm font-semibold text-gray-800">Featured</span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex gap-4">
-          <button
-            type="button"
-            onClick={closeModal}
-            className="flex-1 px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 font-medium transition-all duration-200"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 px-6 py-3 text-white bg-purple-600 rounded-xl hover:bg-purple-700 font-medium transition-all duration-200 disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Save Offer'}
-          </button>
-        </div>
-      </form>
-    );
-  };
-  const OfferFilters = () => {
-    const [filters, setFilters] = useState({
-      featured: null, // Use null instead of '' to indicate no filter
-      type: '', // Keep as empty string for "All Types", but handle in loadOffers
-      page: 1,
-      limit: 20,
-    });
-    const handleFilterChange = (key, value) => {
-      const newFilters = { ...filters, [key]: value, page: 1 };
-      setFilters(newFilters);
-
-      // Prepare query params, omitting invalid or empty values
-      const queryParams = {
-        page: newFilters.page,
-        limit: newFilters.limit,
-      };
-      if (newFilters.featured !== null) {
-        queryParams.featured = newFilters.featured; // Only include if true or false
-      }
-      if (newFilters.type) {
-        queryParams.type = newFilters.type; // Only include if a valid type is selected
-      }
-
-      loadOffers(queryParams);
-    };
-
-
-    return (
-      <div className="mb-6 p-4 bg-white rounded-2xl shadow-lg border border-gray-100 flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Filter className="w-5 h-5 text-gray-600" />
-          <span className="text-sm font-semibold text-gray-800">Filters</span>
-        </div>
-        <select
-          className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          value={filters.featured === null ? '' : filters.featured}
-          onChange={(e) => handleFilterChange('featured', e.target.value === '' ? null : e.target.value === 'true')}
-        >
-          <option value="">All Offers</option>
-          <option value="true">Featured Only</option>
-          <option value="false">Non-Featured</option>
-        </select>
-        <select
-          className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          value={filters.type}
-          onChange={(e) => handleFilterChange('type', e.target.value)}
-        >
-          <option value="">All Types</option>
-          <option value="percentage">Percentage</option>
-          <option value="fixed-amount">Fixed Amount</option>
-          <option value="buy-one-get-one">Buy One Get One</option>
-          <option value="free-delivery">Free Delivery</option>
-          <option value="combo">Combo</option>
-        </select>
-        <div className="ml-auto flex gap-2">
-          <button
-            onClick={() => handleFilterChange('page', Math.max(1, filters.page - 1))}
-            disabled={filters.page === 1}
-            className="px-4 py-2 bg-gray-100 rounded-xl disabled:opacity-50"
-          >
-            Previous
-          </button>
-          <span className="px-4 py-2 text-sm font-medium text-gray-600">
-            Page {pagination.currentPage} of {pagination.totalPages}
-          </span>
-          <button
-            onClick={() => handleFilterChange('page', filters.page + 1)}
-            disabled={filters.page === pagination.totalPages}
-            className="px-4 py-2 bg-gray-100 rounded-xl disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
-      </div>
-    );
-  };
-  const ApplyOfferForm = () => {
-    const [selectedItems, setSelectedItems] = useState(editingItem?.appliedToItems?.map(item => item._id) || []);
-
-    const handleApply = async () => {
-      setLoading(true);
-      try {
-        await apiService.applyOfferToItems(editingItem._id, selectedItems);
-        showNotificationDialog('Success!', 'Offer applied to items successfully');
-        closeModal();
-        loadOffers();
-      } catch (error) {
-        showNotificationDialog('Error', 'Error applying offer: ' + error.message, 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const handleRemove = async () => {
-      setLoading(true);
-      try {
-        await apiService.removeOfferFromItems(editingItem._id, selectedItems);
-        showNotificationDialog('Success!', 'Items removed from offer successfully');
-        closeModal();
-        loadOffers();
-      } catch (error) {
-        showNotificationDialog('Error', 'Error removing items from offer: ' + error.message, 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    return (
-      <div className="space-y-6">
-        <div>
-          <label className="block text-sm font-semibold text-gray-800 mb-3">Select Items</label>
-          <select
-            multiple
-            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-            value={selectedItems}
-            onChange={(e) => setSelectedItems(Array.from(e.target.selectedOptions, option => option.value))}
-          >
-            {foodItems.map((item) => (
-              <option key={item._id} value={item._id}>{item.name}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex gap-4">
-          <button
-            type="button"
-            onClick={closeModal}
-            className="flex-1 px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 font-medium transition-all duration-200"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleRemove}
-            disabled={loading || selectedItems.length === 0}
-            className="flex-1 px-6 py-3 text-white bg-red-600 rounded-xl hover:bg-red-700 font-medium transition-all duration-200 disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Remove from Items'}
-          </button>
-          <button
-            type="button"
-            onClick={handleApply}
-            disabled={loading || selectedItems.length === 0}
-            className="flex-1 px-6 py-3 text-white bg-purple-600 rounded-xl hover:bg-purple-700 font-medium transition-all duration-200 disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Apply to Items'}
-          </button>
-        </div>
-      </div>
-    );
-  };
   const SettingsForm = () => {
     const [formData, setFormData] = useState(settings);
 
@@ -2558,7 +2142,76 @@ useEffect(() => {
   };
 
   // Enhanced Data Grid Component
-  const DataGrid = ({ data, columns, onEdit, onDelete, onAdd, title, actions }) => (
+ const DataGrid = ({ data, title, columns, actions, pagination, onPageChange }) => {
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+      {/* Table rendering */}
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-gray-50">
+              {columns.map((col) => (
+                <th key={col.header} className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  {col.header}
+                </th>
+              ))}
+              {actions.length > 0 && <th className="px-4 py-3 text-right">Actions</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((item) => (
+              <tr key={item._id} className="border-t border-gray-200">
+                {columns.map((col) => (
+                  <td key={col.key} className="px-4 py-4">
+                    {col.render ? col.render(item) : item[col.key]}
+                  </td>
+                ))}
+                {actions.length > 0 && (
+                  <td className="px-4 py-4 text-right">
+                    {actions.map((action, index) => (
+                      <button
+                        key={index}
+                        onClick={() => action.onClick(item)}
+                        className={`text-${action.color}-600 hover:text-${action.color}-800 p-2`}
+                      >
+                        <action.icon className="w-5 h-5" />
+                      </button>
+                    ))}
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {/* Pagination */}
+      {pagination && (
+        <div className="flex justify-center items-center gap-4 mt-4">
+          <button
+            onClick={() => onPageChange(pagination.currentPage - 1)}
+            disabled={pagination.currentPage === 1}
+            className="px-4 py-2 bg-gray-100 rounded-lg disabled:opacity-50 hover:bg-gray-200"
+          >
+            Previous
+          </button>
+          <span className="text-sm font-medium">
+            Page {pagination.currentPage} of {pagination.totalPages || 1}
+          </span>
+          <button
+            onClick={() => onPageChange(pagination.currentPage + 1)}
+            disabled={pagination.currentPage >= (pagination.totalPages || 1)}
+            className="px-4 py-2 bg-gray-100 rounded-lg disabled:opacity-50 hover:bg-gray-200"
+          >
+            Next
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+ const DataGrids = ({ data, columns, onEdit, onDelete, onAdd, title, actions }) => (
     <div className="bg-white rounded-3xl shadow-lg border-0 overflow-hidden">
       <div className="p-8 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
         <div className="flex justify-between items-center mb-6">
@@ -2773,13 +2426,7 @@ useEffect(() => {
                   gradient: 'from-rose-500 to-pink-600',
                   action: () => setActiveTab('banners')
                 },
-                {
-                  title: 'Create Offers',
-                  description: 'Manage promotions and deals',
-                  icon: Percent,
-                  gradient: 'from-purple-500 to-pink-600',
-                  action: () => setActiveTab('offers')
-                }
+              
               ].map((action, index) => (
                 <div
                   key={index}
@@ -2799,7 +2446,7 @@ useEffect(() => {
 
       case 'categories':
         return (
-          <DataGrid
+          <DataGrids
             data={categories}
             title="Categories"
             onEdit={(item) => openModal('category', item)}
@@ -2949,348 +2596,261 @@ useEffect(() => {
             ]}
           />
         );
-      case 'menu-items':
-        return (
-          <DataGrid
-            data={foodItems}
-            title="Menu Items"
-            onEdit={(item) => openModal('menu-item', item)}
-            onDelete={handleDelete}
-            onAdd={() => openModal('menu-item')}
-            columns={[
-              {
-                header: 'Image',
-                key: 'imageUrl',
-                render: (item) => (
-                  <div className="relative">
-                    <img
-                      src={item.imageUrl}
-                      alt={item.name}
-                      className="w-20 h-16 object-cover rounded-2xl border-2 border-gray-100"
-                    />
-                  </div>
-                ),
-              },
-              {
-                header: 'Name',
-                key: 'name',
-                render: (item) => (
-                  <div>
-                    <p className="font-bold text-gray-900">{item.name}</p>
-                    <p className="text-xs text-gray-500">{item.category?.name || 'Unknown'}</p>
-                  </div>
-                )
-              },
-              {
-                header: 'Description',
-                key: 'description',
-                render: (item) => <div className="max-w-xs text-gray-600 text-sm">{item.description}</div>,
-              },
-              {
-                header: 'Price',
-                key: 'price',
-                render: (item) => (
-                  <div>
-                    <p className="font-bold text-gray-900">{formatCurrency(item.price)}</p>
-                    {item.originalPrice && item.originalPrice > item.price && (
-                      <p className="text-xs text-gray-500 line-through">{formatCurrency(item.originalPrice)}</p>
-                    )}
-                  </div>
-                ),
-              },
-              {
-                header: 'Stock',
-                key: 'stockQuantity',
-                render: (item) => (
-                  <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${item.stockQuantity > 10 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                      item.stockQuantity > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                        'bg-red-50 text-red-700 border-red-200'
-                    }`}>
-                    {item.stockQuantity || 0}
-                  </span>
-                ),
-              },
-              {
-                header: 'Status',
-                key: 'status',
-                render: (item) => (
-                  <div className="flex flex-col gap-2">
-                    <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${item.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
-                      }`}>
-                      {item.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                    <div className="flex gap-1">
-                      {item.isFeatured && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-700 border border-yellow-200">
-                          <Star className="w-3 h-3 mr-1" />
-                          Featured
-                        </span>
-                      )}
-                      {item.isPopular && (
-                        <span className="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
-                          Popular
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ),
-              },
-            ]}
-            actions={[
-              {
-                icon: Eye,
-                label: 'View Details',
-                color: 'blue',
-                onClick: (item) => {
-                  console.log('View item details:', item);
-                }
-              }
-            ]}
-          />
-        );
-
-      case 'offers':
-        return (
-          <div>
-            <OfferFilters />
-            <DataGrid
-              data={offers}
-              title="Offers"
-              onEdit={(item) => openModal('offer', item)}
-              onDelete={handleDelete}
-              onAdd={() => openModal('offer')}
-              columns={[
-                {
-                  header: 'Image',
-                  key: 'imageUrl',
-                  render: (item) => (
-                    <div className="relative">
-                      <img
-                        src={item.imageUrl}
-                        alt={item.title}
-                        className="w-20 h-16 object-cover rounded-2xl border-2 border-gray-100"
-                      />
-                    </div>
-                  ),
-                },
-                {
-                  header: 'Title',
-                  key: 'title',
-                  render: (item) => (
-                    <div>
-                      <p className="font-bold text-gray-900">{item.title}</p>
-                      {item.subtitle && <p className="text-xs text-gray-500">{item.subtitle}</p>}
-                    </div>
-                  ),
-                },
-                {
-                  header: 'Type',
-                  key: 'type',
-                  render: (item) => (
-                    <span className="capitalize bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold border border-blue-200">
-                      {item.type.replace('-', ' ')}
-                    </span>
-                  ),
-                },
-                {
-                  header: 'Discount',
-                  key: 'value',
-                  render: (item) => (
-                    <span className="font-bold text-emerald-600">{item.discountDisplay}</span>
-                  ),
-                },
-                {
-                  header: 'Items',
-                  key: 'appliedToItems',
-                  render: (item) => (
-                    <div className="max-w-xs">
-                      <p className="text-sm text-gray-900 font-medium">
-                        {item.appliedToItems?.slice(0, 2).map(item => item.name).join(', ')}
-                        {item.appliedToItems?.length > 2 && (
-                          <span className="text-gray-500"> +{item.appliedToItems.length - 2} more</span>
-                        )}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">{item.appliedToItems?.length || 0} items</p>
-                    </div>
-                  ),
-                },
-                {
-                  header: 'Categories',
-                  key: 'appliedToCategories',
-                  render: (item) => (
-                    <div className="max-w-xs">
-                      <p className="text-sm text-gray-900 font-medium">
-                        {item.appliedToCategories?.slice(0, 2).map(cat => cat.name).join(', ')}
-                        {item.appliedToCategories?.length > 2 && (
-                          <span className="text-gray-500"> +{item.appliedToCategories.length - 2} more</span>
-                        )}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">{item.appliedToCategories?.length || 0} categories</p>
-                    </div>
-                  ),
-                },
-                {
-                  header: 'Code',
-                  key: 'couponCode',
-                  render: (item) => (
-                    <span className="font-mono text-xs bg-gray-100 text-gray-800 px-3 py-1 rounded-lg border">
-                      {item.couponCode || 'No Code'}
-                    </span>
-                  ),
-                },
-                {
-                  header: 'Valid Until',
-                  key: 'endDate',
-                  render: (item) => (
-                    <div className="text-sm">
-                      <p className="text-gray-900">{formatDate(item.endDate)}</p>
-                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                        <Clock className="w-3 h-3" />
-                        {item.isValid ? 'Active' : 'Expired'}
-                      </p>
-                    </div>
-                  ),
-                },
-                {
-                  header: 'Usage',
-                  key: 'usageCount',
-                  render: (item) => (
-                    <div className="text-sm">
-                      <p className="font-semibold text-gray-900">
-                        {item.usageCount || 0} / {item.remainingUses}
-                      </p>
-                    </div>
-                  ),
-                },
-                {
-                  header: 'Status',
-                  key: 'isActive',
-                  render: (item) => (
-                    <div className="flex flex-col gap-2">
-                      <span
-                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${item.isValid ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
-                          }`}
-                      >
-                        {item.isValid ? 'Active' : 'Inactive'}
-                      </span>
-                      {item.isFeatured && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-700 border border-yellow-200">
-                          <Star className="w-3 h-3 mr-1" />
-                          Featured
-                        </span>
-                      )}
-                    </div>
-                  ),
-                },
-              ]}
-              actions={[
-                {
-                  icon: Package,
-                  label: 'Apply to Items',
-                  color: 'purple',
-                  onClick: (item) => openModal('apply-offer', item),
-                },
-              ]}
-            />
-          </div>
-        ); case 'orders':
-        return (
-          <DataGrid
-            data={orders}
-            title="Orders"
-            onEdit={(item) => console.log('View order details', item._id)}
-            onDelete={() => { }}
-            columns={[
-              {
-                header: 'Order #',
-                key: 'orderNumber',
-                render: (item) => (
-                  <div>
-                    <p className="font-bold text-gray-900">{item.orderNumber || `#${item._id?.slice(-6)}`}</p>
-                    <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                      <Calendar className="w-3 h-3" />
-                      {formatDate(item.createdAt)}
-                    </p>
-                  </div>
-                )
-              },
-              {
-                header: 'Customer',
-                key: 'userId',
-                render: (item) => (
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Users className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">{item.userId?.fullName || item.customerName || 'Unknown'}</p>
-                      <p className="text-xs text-gray-500">{item.deliveryType || 'Pickup'}</p>
-                    </div>
-                  </div>
-                )
-              },
-              {
-                header: 'Items',
-                key: 'items',
-                render: (item) => (
-                  <div className="max-w-xs">
-                    <p className="text-sm text-gray-900 font-medium">
-                      {item.items?.slice(0, 2).map(orderItem =>
-                        orderItem.foodItem?.name || 'Item'
-                      ).join(', ')}
-                      {item.items?.length > 2 && <span className="text-gray-500"> +{item.items.length - 2} more</span>}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">{item.items?.length || 0} items total</p>
-                  </div>
-                ),
-              },
-              {
-                header: 'Total',
-                key: 'total',
-                render: (item) => (
-                  <div>
-                    <p className="font-bold text-lg text-gray-900">{formatCurrency(item.total)}</p>
-                    {item.deliveryType === 'delivery' && (
-                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                        <MapPin className="w-3 h-3" />
-                        Delivery
-                      </p>
-                    )}
-                  </div>
-                ),
-              },
-              {
-                header: 'Status',
-                key: 'status',
-                render: (item) => (
-                  <select
-                    className={`text-xs font-semibold rounded-xl px-3 py-2 border-0 cursor-pointer transition-all hover:shadow-md ${getStatusColor(item.status)}`}
-                    value={item.status}
-                    onChange={(e) => handleOrderStatusUpdate(item._id, e.target.value)}
+ case 'menu-items':
+  return (
+    <div>
+      {/* Search bar */}
+      <div className="mb-4">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search menu items..."
+          className="w-full px-4 py-3 border border-gray-200 rounded-xl"
+        />
+      </div>
+      {loading ? (
+        <div className="text-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
+          <p className="text-sm text-gray-500 mt-2">Loading menu items...</p>
+        </div>
+      ) : foodItems.length === 0 ? (
+        <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+          <p className="text-sm">No menu items found.</p>
+        </div>
+      ) : (
+        <DataGrid
+          data={foodItems}
+          title="Menu Items"
+          onEdit={(item) => openModal('menu-item', item)}
+          onDelete={handleDelete}
+          onAdd={() => openModal('menu-item')}
+          pagination={foodItemsPagination}
+          onPageChange={(page) => loadFoodItems({ page })}
+          columns={[
+            {
+              header: 'Image',
+              key: 'imageUrl',
+              render: (item) => (
+                <div className="relative">
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    className="w-20 h-16 object-cover rounded-2xl border-2 border-gray-100"
+                  />
+                </div>
+              ),
+            },
+            {
+              header: 'Name',
+              key: 'name',
+              render: (item) => (
+                <div>
+                  <p className="font-bold text-gray-900">{item.name}</p>
+                  <p className="text-xs text-gray-500">{item.category?.name || 'Unknown'}</p>
+                </div>
+              ),
+            },
+            {
+              header: 'Description',
+              key: 'description',
+              render: (item) => <div className="max-w-xs text-gray-600 text-sm">{item.description}</div>,
+            },
+            {
+              header: 'Price',
+              key: 'price',
+              render: (item) => (
+                <div>
+                  <p className="font-bold text-gray-900">{formatCurrency(item.price)}</p>
+                  {item.originalPrice && item.originalPrice > item.price && (
+                    <p className="text-xs text-gray-500 line-through">{formatCurrency(item.originalPrice)}</p>
+                  )}
+                </div>
+              ),
+            },
+            {
+              header: 'Stock',
+              key: 'stockQuantity',
+              render: (item) => (
+                <span
+                  className={`px-3 py-1 text-xs font-semibold rounded-full border ${
+                    item.stockQuantity > 10
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : item.stockQuantity > 0
+                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                      : 'bg-red-50 text-red-700 border-red-200'
+                  }`}
+                >
+                  {item.stockQuantity || 0}
+                </span>
+              ),
+            },
+            {
+              header: 'Status',
+              key: 'status',
+              render: (item) => (
+                <div className="flex flex-col gap-2">
+                  <span
+                    className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${
+                      item.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
+                    }`}
                   >
-                    <option value="pending">Pending</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="preparing">Preparing</option>
-                    <option value="ready">Ready</option>
-                    <option value="out-for-delivery">Out for Delivery</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                ),
+                    {item.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                  <div className="flex gap-1">
+                    {item.isFeatured && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-700 border border-yellow-200">
+                        <Star className="w-3 h-3 mr-1" />
+                        Featured
+                      </span>
+                    )}
+                    {item.isPopular && (
+                      <span className="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                        Popular
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ),
+            },
+          ]}
+          actions={[
+            {
+              icon: Eye,
+              label: 'View Details',
+              color: 'blue',
+              onClick: (item) => {
+                console.log('View item details:', item);
               },
-            ]}
-            actions={[
-              {
-                icon: Eye,
-                label: 'View Details',
-                color: 'blue',
-                onClick: (item) => {
-                  console.log('View order:', item);
-                }
-              }
-            ]}
-          />
-        );
+            },
+          ]}
+        />
+      )}
+    </div>
+  );
+  
+  
+  case 'orders':
+  return (
+    <div>
+      {/* Search bar */}
+      <div className="mb-4">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search orders..."
+          className="w-full px-4 py-3 border border-gray-200 rounded-xl"
+        />
+      </div>
+      {loading ? (
+        <div className="text-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
+          <p className="text-sm text-gray-500 mt-2">Loading orders...</p>
+        </div>
+      ) : orders.length === 0 ? (
+        <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+          <p className="text-sm">No orders found.</p>
+        </div>
+      ) : (
+        <DataGrid
+          data={orders}
+          title="Orders"
+          onEdit={(item) => console.log('View order details', item._id)}
+          onDelete={() => {}}
+          pagination={orderPagination}
+          onPageChange={(page) => loadOrders({ page })}
+          columns={[
+            {
+              header: 'Order #',
+              key: 'orderNumber',
+              render: (item) => (
+                <div>
+                  <p className="font-bold text-gray-900">{item.orderNumber || `#${item._id?.slice(-6)}`}</p>
+                  <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                    <Calendar className="w-3 h-3" />
+                    {formatDate(item.createdAt)}
+                  </p>
+                </div>
+              ),
+            },
+            {
+              header: 'Customer',
+              key: 'userId',
+              render: (item) => (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Users className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">{item.userId?.fullName || item.customerName || 'Unknown'}</p>
+                    <p className="text-xs text-gray-500">{item.deliveryType || 'Pickup'}</p>
+                  </div>
+                </div>
+              ),
+            },
+            {
+              header: 'Items',
+              key: 'items',
+              render: (item) => (
+                <div className="max-w-xs">
+                  <p className="text-sm text-gray-900 font-medium">
+                    {item.items?.slice(0, 2).map((orderItem) => orderItem.foodItem?.name || 'Item').join(', ')}
+                    {item.items?.length > 2 && <span className="text-gray-500"> +{item.items.length - 2} more</span>}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">{item.items?.length || 0} items total</p>
+                </div>
+              ),
+            },
+            {
+              header: 'Total',
+              key: 'total',
+              render: (item) => (
+                <div>
+                  <p className="font-bold text-lg text-gray-900">{formatCurrency(item.total)}</p>
+                  {item.deliveryType === 'delivery' && (
+                    <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                      <MapPin className="w-3 h-3" />
+                      Delivery
+                    </p>
+                  )}
+                </div>
+              ),
+            },
+            {
+              header: 'Status',
+              key: 'status',
+              render: (item) => (
+                <select
+                  className={`text-xs font-semibold rounded-xl px-3 py-2 border-0 cursor-pointer transition-all hover:shadow-md ${getStatusColor(item.status)}`}
+                  value={item.status}
+                  onChange={(e) => handleOrderStatusUpdate(item._id, e.target.value)}
+                >
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="preparing">Preparing</option>
+                  <option value="ready">Ready</option>
+                  <option value="out-for-delivery">Out for Delivery</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              ),
+            },
+          ]}
+          actions={[
+            {
+              icon: Eye,
+              label: 'View Details',
+              color: 'blue',
+              onClick: (item) => {
+                console.log('View order:', item);
+              },
+            },
+          ]}
+        />
+      )}
+    </div>
+  );
 
       case 'settings':
         return (
@@ -3309,8 +2869,6 @@ useEffect(() => {
       category: { title: `${editingItem ? 'Edit' : 'Add'} Category`, component: <CategoryForm />, size: 'max-w-4xl' },
       'menu-item': { title: `${editingItem ? 'Edit' : 'Add'} Menu Item`, component: <FoodItemForm />, size: 'max-w-6xl' },
       banner: { title: `${editingItem ? 'Edit' : 'Add'} Banner Item`, component: <BannerForm />, size: 'max-w-6xl' },
-      offer: { title: `${editingItem ? 'Edit' : 'Add'} Offer`, component: <OfferForm />, size: 'max-w-4xl' },
-      'apply-offer': { title: 'Apply Offer to Items', component: <ApplyOfferForm />, size: 'max-w-4xl' },
     };
     const config = modalConfigs[modalType];
     return config ? { title: config.title, component: config.component, size: config.size } : null;
@@ -3380,7 +2938,12 @@ useEffect(() => {
                   onClick={() => {
                     if (item.id === "offers") {
                       router.push("/offer"); // Navigate to /offers page
-                    } else {
+                    }
+                    else if (item.id === "contact") {
+                      router.push("/contact"); // Navigate to /offers page
+                    } 
+                    
+                    else {
                       setActiveTab(item.id);
                     }
                   }}
