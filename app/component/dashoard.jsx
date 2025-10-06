@@ -2507,7 +2507,7 @@ useEffect(() => {
         );
       case 'banners':
         return (
-          <DataGrid
+          <DataGrids
             data={banners}
             title="Banners"
             onEdit={(item) => openModal('banner', item)}
