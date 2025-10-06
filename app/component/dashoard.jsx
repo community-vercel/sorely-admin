@@ -37,6 +37,7 @@ import {
   MapPin,
   Phone,
   Euro,
+  PhoneCallIcon,
 } from 'lucide-react';
 import { useRouter } from "next/navigation";
 
@@ -901,11 +902,11 @@ const formatCurrency = useCallback((amount, currency = 'EUR') => {
     setShowModal(true);
   }, []);
 
-  const closeModal = useCallback(() => {
-    setShowModal(false);
-    setEditingItem(null);
-    setModalType('');
-  }, []);
+const closeModal = useCallback(() => {
+  setShowModal(false);
+  setEditingItem(null);
+  setModalType('');
+}, []);
 
   // CRUD operations
   const handleSave = async (data, type) => {
@@ -2024,7 +2025,84 @@ useEffect(() => {
       </form>
     );
   };
-
+const OrderDetails = ({ order }) => {
+  return (
+    <div className="space-y-8">
+      <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-2xl border border-blue-200">
+        <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+          Order Details
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-2">Order Number</label>
+            <p className="text-gray-900">{order.orderNumber || `#${order._id?.slice(-6)}`}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-2">Customer</label>
+            <p className="text-gray-900">{order.userId?.fullName || order.customerName || 'Unknown'}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-2">Phone</label>
+            <p className="text-gray-900">{order.userId?.phone || 'N/A'}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-2">Delivery Type</label>
+            <p className="text-gray-900">{order.deliveryType || 'Pickup'}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-2">Total</label>
+            <p className="text-gray-900">{formatCurrency(order.total)}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-2">Status</label>
+            <p
+              className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(
+                order.status
+              )}`}
+            >
+              {order.status}
+            </p>
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-semibold text-gray-800 mb-2">Order Items</label>
+            <div className="space-y-2">
+              {order.items?.map((item, index) => (
+                <div
+                  key={index}
+                  className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {item.foodItem?.name || 'Unknown Item'}
+                    </p>
+                    <p className="text-xs text-gray-500">Quantity: {item.quantity}</p>
+                  </div>
+                  <p className="text-sm font-medium text-gray-900">
+                    {formatCurrency(item.totalPrice )}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-2">Created At</label>
+            <p className="text-gray-900">{formatDate(order.createdAt)}</p>
+          </div>
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={closeModal}
+          className="px-8 py-4 text-gray-700 bg-gray-100 rounded-2xl hover:bg-gray-200 font-semibold transition-all duration-200 hover:scale-[0.98]"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+};
   const SettingsForm = () => {
     const [formData, setFormData] = useState(settings);
 
@@ -2761,7 +2839,7 @@ useEffect(() => {
   );
   
   
-  case 'orders':
+ case 'orders':
   return (
     <div>
       {/* Search bar */}
@@ -2787,8 +2865,8 @@ useEffect(() => {
         <DataGrid
           data={orders}
           title="Orders"
-          onEdit={(item) => console.log('View order details', item._id)}
-          onDelete={() => {}}
+          onEdit={(item) => openModal('order-details', item)} // Updated to open modal
+          onDelete={() => {}} // No delete action for orders
           pagination={orderPagination}
           onPageChange={(page) => loadOrders({ page })}
           columns={[
@@ -2816,6 +2894,29 @@ useEffect(() => {
                   <div>
                     <p className="font-semibold text-gray-900">{item.userId?.fullName || item.customerName || 'Unknown'}</p>
                     <p className="text-xs text-gray-500">{item.deliveryType || 'Pickup'}</p>
+                  </div>
+                </div>
+              ),
+            },
+            {
+              header: 'Phone',
+              key: 'userId',
+              render: (item) => (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <PhoneCallIcon className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    {item.userId?.phone || item.customerName ? (
+                      <a
+                        href={`tel:${item.userId?.phone || ''}`}
+                        className="font-semibold text-gray-900 hover:text-blue-600"
+                      >
+                        {item.userId?.phone || item.customerName}
+                      </a>
+                    ) : (
+                      <p className="font-semibold text-gray-900">Unknown</p>
+                    )}
                   </div>
                 </div>
               ),
@@ -2873,16 +2974,13 @@ useEffect(() => {
               icon: Eye,
               label: 'View Details',
               color: 'blue',
-              onClick: (item) => {
-                console.log('View order:', item);
-              },
+              onClick: (item) => openModal('order-details', item), // Updated to open modal
             },
           ]}
         />
       )}
     </div>
   );
-
       case 'settings':
         return (
           <SettingsForm />
@@ -2900,6 +2998,8 @@ useEffect(() => {
       category: { title: `${editingItem ? 'Edit' : 'Add'} Category`, component: <CategoryForm />, size: 'max-w-4xl' },
       'menu-item': { title: `${editingItem ? 'Edit' : 'Add'} Menu Item`, component: <FoodItemForm />, size: 'max-w-6xl' },
       banner: { title: `${editingItem ? 'Edit' : 'Add'} Banner Item`, component: <BannerForm />, size: 'max-w-6xl' },
+          'order-details': { title: 'Order Details', component: <OrderDetails order={editingItem} />, size: 'max-w-5xl' },
+
     };
     const config = modalConfigs[modalType];
     return config ? { title: config.title, component: config.component, size: config.size } : null;
