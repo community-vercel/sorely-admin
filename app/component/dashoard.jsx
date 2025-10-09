@@ -40,7 +40,11 @@ import {
   PhoneCallIcon,
 } from 'lucide-react';
 import { useRouter } from "next/navigation";
+import { useSearchParams } from 'next/navigation'; // For Next.js, or use equivalent for your framework
 
+// Add these imports to your RestaurantAdminDashboard component
+import { useAdminNotifications } from '../../hooks/useAdminNotifications';
+import NotificationBell from './notification';
 // API Configuration
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://soleybackend.vercel.app/api/v1';
 
@@ -649,6 +653,7 @@ const RestaurantAdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [apiService] = useState(new ApiService());
+  
   const [banners, setBanners] = useState([]);
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
   const [notificationDialog, setNotificationDialog] = useState({ isOpen: false, title: '', message: '', type: 'success' });
@@ -663,6 +668,17 @@ const RestaurantAdminDashboard = () => {
   const [foodItems, setFoodItems] = useState([]);
   const [offers, setOffers] = useState([]);
   const [orders, setOrders] = useState([]);
+  const searchParams=useSearchParams()
+  const {
+    fcmToken,
+    notification,
+    permissionStatus,
+    initializeNotifications,
+    requestPermission,
+    clearNotification,
+    deleteFCMToken
+  } = useAdminNotifications(apiService);
+  
 
   const [settings, setSettings] = useState({
     restaurantName: 'Delicious Bites Restaurant',
@@ -1015,6 +1031,29 @@ const [foodItemsPagination, setFoodItemsPagination] = useState({
     { id: 'banners', name: 'Banners', icon: ImageIcon, gradient: 'from-indigo-500 to-purple-600' },
     { id: 'settings', name: 'Settings', icon: Settings, gradient: 'from-gray-500 to-gray-700' },
   ];
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data.type === 'NOTIFICATION_CLICK') {
+        const { type, orderId } = event.data.data;
+        if (type === 'new_order' && orderId) {
+          setActiveTab('orders');
+          router.push(`/admin?tab=orders&orderId=${orderId}`); // Optional: sync URL
+          setTimeout(() => {
+            const order = orders.find(o => o._id === orderId);
+            if (order) {
+              openModal('order-details', order);
+            } else {
+              showNotificationDialog('Error', 'Order not found', 'error');
+              loadOrders();
+            }
+          }, 500);
+        }
+      }
+    };
+
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', handleMessage);
+  }, [orders, router]);
 
   // Enhanced Dashboard Stats Component
   const DashboardStats = () => (
@@ -3007,6 +3046,98 @@ const OrderDetails = ({ order }) => {
 
   const modalContent = getModalContent();
 
+
+  useEffect(() => {
+    const initNotifications = async () => {
+      try {
+        await initializeNotifications();
+        console.log('Notifications initialized for admin');
+      } catch (error) {
+        console.error('Failed to initialize notifications:', error);
+      }
+    };
+
+    initNotifications();
+
+    // Cleanup on unmount
+    return () => {
+      deleteFCMToken();
+    };
+  }, []);
+
+  // Handle incoming notifications
+  useEffect(() => {
+    if (notification) {
+      console.log('New notification received:', notification);
+      
+      // Handle different notification types
+      if (notification.data?.type === 'new_order') {
+        // Reload orders if on orders tab
+        if (activeTab === 'orders') {
+          loadOrders();
+        }
+        
+        // Update dashboard stats
+        loadDashboardData();
+        
+        // Show toast notification (you can add a toast library)
+        showNotificationDialog(
+          'New Order!',
+          `Order ${notification.data.orderNumber} has been placed`,
+          'success'
+        );
+      }
+    }
+  }, [notification, activeTab]);
+
+  // Handle notification clickconst {
+  const handleNotificationClick = (notif) => {
+    if (notif.data?.type === 'new_order' && notif.data?.orderId) {
+      // Navigate to orders tab
+      setActiveTab('orders');
+      
+      // Optionally, open the order details modal
+      setTimeout(() => {
+        const order = orders.find(o => o._id === notif.data.orderId);
+        if (order) {
+          openModal('order-details', order);
+        }
+      }, 500);
+    }
+    
+    clearNotification();
+  };
+
+  // Notification permission banner
+const NotificationPermissionBanner = () => {
+    if (permissionStatus === 'granted' || permissionStatus === 'denied') {
+      return null;
+    }
+
+    return (
+      <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4 mb-6 rounded-2xl shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Bell className="w-6 h-6" />
+            <div>
+              <p className="font-semibold">Enable Notifications</p>
+              <p className="text-sm text-blue-100">
+                Get instant alerts for new orders and updates
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={requestPermission}
+            className="bg-white text-blue-600 px-6 py-2 rounded-xl font-semibold hover:bg-blue-50 transition-colors"
+          >
+            Enable
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
       <ConfirmDialog
@@ -3024,7 +3155,7 @@ const OrderDetails = ({ order }) => {
         message={notificationDialog.message}
         type={notificationDialog.type}
       />
-      <header className="bg-white shadow-xl border-b border-gray-100 sticky top-0 z-40 backdrop-blur-md bg-opacity-90">
+   <header className="bg-white shadow-xl border-b border-gray-100 sticky top-0 z-40 backdrop-blur-md bg-opacity-90">
         <div className="flex items-center justify-between px-8 py-6">
           <div className="flex items-center gap-6">
             <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 p-3 rounded-2xl shadow-lg">
@@ -3036,12 +3167,16 @@ const OrderDetails = ({ order }) => {
             </div>
           </div>
           <div className="flex items-center gap-6">
-            <button className="relative p-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-2xl transition-all duration-200">
-              <Bell className="w-6 h-6" />
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                <span className="text-xs text-white font-bold">3</span>
-              </div>
-            </button>
+            {/* Replace the existing bell button with NotificationBell component */}
+          <NotificationBell
+  notification={notification}
+  onClear={clearNotification}
+  onNotificationClick={handleNotificationClick}
+  fcmToken={fcmToken}
+  permissionStatus={permissionStatus}
+  requestPermission={requestPermission}
+/>
+            
             <div className="flex items-center gap-4 bg-gray-50 rounded-2xl px-4 py-3">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
                 <span className="text-sm font-bold text-white">AD</span>
@@ -3097,6 +3232,8 @@ const OrderDetails = ({ order }) => {
           </div>
         </nav>
         <main className="flex-1 p-8 overflow-auto">
+                    <NotificationPermissionBanner />
+
           {loading ? (
             <div className="flex items-center justify-center h-96">
               <div className="text-center">
