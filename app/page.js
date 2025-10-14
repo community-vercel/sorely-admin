@@ -2,6 +2,7 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { Eye, EyeOff, Shield, Lock, Mail, AlertCircle, CheckCircle, Users, Settings, BarChart3, LogOut, Crown } from 'lucide-react';
 import RestaurantAdminDashboard from './component/dashoard';
+import Dashoard from './admin/page';
 
 // Auth Context
 const AuthContext = createContext();
@@ -368,7 +369,7 @@ const SuperAdminApp = () => {
   return (
     <AuthProvider>
       <ProtectedRoute>
-        <RestaurantAdminDashboard />
+<Dashoard/>
       </ProtectedRoute>
     </AuthProvider>
   );

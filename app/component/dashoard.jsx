@@ -38,6 +38,7 @@ import {
   Phone,
   Euro,
   PhoneCallIcon,
+  LocationEdit,
 } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import { useSearchParams } from 'next/navigation'; // For Next.js, or use equivalent for your framework
@@ -52,6 +53,14 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://soleybackend.ve
 class ApiService {
   constructor() {
     this.token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+    this.language = typeof window !== 'undefined' ? localStorage.getItem('language') || 'en' : 'en';
+  }
+
+  setLanguage(lang) {
+    this.language = lang;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('language', lang);
+    }
   }
 
   async request(endpoint, options = {}) {
@@ -60,6 +69,7 @@ class ApiService {
       headers: {
         'Content-Type': 'application/json',
         ...(this.token && { Authorization: `Bearer ${this.token}` }),
+        'Accept-Language': this.language, // Add language header
         ...options.headers,
       },
       ...options,
@@ -115,10 +125,6 @@ class ApiService {
   }
 
   // Categories API
-  async getCategories() {
-    return this.request('/categories/all');
-  }
-
   async createCategory(data) {
     return this.request('/categories', {
       method: 'POST',
@@ -131,6 +137,11 @@ class ApiService {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+  }
+
+  async getCategories(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/categories${query ? `?${query}` : ''}`);
   }
   async getBanners(params = {}) {
     const queryString = new URLSearchParams(params).toString();
@@ -175,12 +186,12 @@ class ApiService {
   }
 
   async deleteCategory(id) {
-    console.log('Deleting category with ID:', id);
+    console.log('Deleting category with IDssss:', id);
     return this.request(`/categories/${id}`, {
       method: 'DELETE',
     });
   }
-// Offers API
+  // Offers API
   // Offers API
   async getOffers(params = {}) {
     const queryString = new URLSearchParams(params).toString();
@@ -190,7 +201,13 @@ class ApiService {
   async getItemsWithOffers() {
     return this.request('/offer/items-with-offers');
   }
-
+  getLocalized(lang) {
+    return {
+      ...this,
+      name: this.name && typeof this.name === 'object' ? this.name[lang] || this.name.en || 'Unnamed' : 'Unnamed',
+      description: this.description && typeof this.description === 'object' ? this.description[lang] || this.description.en || 'No description' : 'No description',
+    };
+  }
   async createOffer(data) {
     return this.request('/offer', {
       method: 'POST',
@@ -263,12 +280,12 @@ class ApiService {
     });
   }
 
-  
+
   // Orders API
- async getOrders(params = {}) {
-  const queryString = new URLSearchParams(params).toString();
-  return this.request(`/orders/getall${queryString ? `?${queryString}` : ''}`);
-}
+  async getOrders(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.request(`/orders/getall${queryString ? `?${queryString}` : ''}`);
+  }
 
   async updateOrderStatus(id, status, message) {
     return this.request(`/orders/${id}/status`, {
@@ -323,8 +340,8 @@ const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText
             <button
               onClick={onConfirm}
               className={`flex-1 px-6 py-3 text-white rounded-xl font-medium transition-all duration-200 hover:scale-[0.98] shadow-lg ${type === 'danger'
-                  ? 'bg-red-600 hover:bg-red-700 shadow-red-200'
-                  : 'bg-amber-600 hover:bg-amber-700 shadow-amber-200'
+                ? 'bg-red-600 hover:bg-red-700 shadow-red-200'
+                : 'bg-amber-600 hover:bg-amber-700 shadow-amber-200'
                 }`}
             >
               {confirmText}
@@ -357,8 +374,8 @@ const NotificationDialog = ({ isOpen, onClose, title, message, type = "success" 
           <button
             onClick={onClose}
             className={`w-full px-6 py-3 text-white rounded-xl font-medium transition-all duration-200 hover:scale-[0.98] shadow-lg ${type === 'success'
-                ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200'
-                : 'bg-red-600 hover:bg-red-700 shadow-red-200'
+              ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200'
+              : 'bg-red-600 hover:bg-red-700 shadow-red-200'
               }`}
           >
             Continue
@@ -374,7 +391,10 @@ const ImageUpload = ({ value, onChange, className = "", multiple = false }) => {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(multiple ? (value || []) : (value || ''));
   const [apiService] = useState(new ApiService());
-
+  const setAdminLanguage = (lang) => {
+    apiService.setLanguage(lang);
+    loadData(); // Reload data to reflect the new language
+  };
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -653,7 +673,8 @@ const RestaurantAdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [apiService] = useState(new ApiService());
-  
+  const [selectedLanguage, setSelectedLanguage] = useState(apiService.language);
+
   const [banners, setBanners] = useState([]);
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
   const [notificationDialog, setNotificationDialog] = useState({ isOpen: false, title: '', message: '', type: 'success' });
@@ -668,7 +689,7 @@ const RestaurantAdminDashboard = () => {
   const [foodItems, setFoodItems] = useState([]);
   const [offers, setOffers] = useState([]);
   const [orders, setOrders] = useState([]);
-  const searchParams=useSearchParams()
+  const searchParams = useSearchParams()
   const {
     fcmToken,
     notification,
@@ -678,7 +699,7 @@ const RestaurantAdminDashboard = () => {
     clearNotification,
     deleteFCMToken
   } = useAdminNotifications(apiService);
-  
+
 
   const [settings, setSettings] = useState({
     restaurantName: 'Delicious Bites Restaurant',
@@ -689,7 +710,7 @@ const RestaurantAdminDashboard = () => {
     apiKey: '',
     secretKey: '',
   });
-const [pagination, setPagination] = useState({
+  const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
     totalOffers: 0,
@@ -767,7 +788,7 @@ const [pagination, setPagination] = useState({
         apiService.getOffers({ limit: 5 }).catch(() => ({ offers: [] })),
       ]);
 
-      
+
       setDashboardStats({
         revenue: { current: statsResponse.stats?.totalRevenue || 45250.75, growth: 15.3, period: 'month' },
         orders: { current: statsResponse.stats?.totalOrders || 2847, growth: 12.8, period: 'week' },
@@ -775,17 +796,50 @@ const [pagination, setPagination] = useState({
         menuItems: { current: itemsResponse.count || 68, growth: 5.2, period: 'month' },
         activeOffers: { current: offersResponse.totalOffers || 0, growth: 10, period: 'month' },
       });
-console.log("statsResponse",statsResponse)
+      console.log("statsResponse", statsResponse)
       setOrders(ordersResponse.orders || []);
       setOffers(offersResponse.offers || []);
     } catch (error) {
       console.error('Dashboard data error:', error);
     }
   };
+  const getLocalized = (category, lang) => ({
+    ...category,
+    name: category.name
+      ? typeof category.name === 'object'
+        ? category.name[lang] || category.name.en || 'Unnamed'
+        : category.name
+      : 'Unnamed',
+    description: category.description
+      ? typeof category.description === 'object'
+        ? category.description[lang] || category.description.en || 'No description'
+        : category.description
+      : 'No description',
+  });
+
   const loadCategories = async () => {
-    const response = await apiService.getCategories();
-    setCategories(response.categories || []);
+    try {
+      const response = await apiService.getCategories();
+      console.log('Raw categories response:', response);
+      const transformedCategories = response.categories.map(cat => getLocalized(cat, apiService.language)) || [];
+      console.log('Transformed categories:', transformedCategories);
+      setCategories(transformedCategories);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+      showNotificationDialog('Error', 'Error loading categories: ' + error.message, 'error');
+    }
   };
+const getLocalizedFoodItem = (item, lang) => ({
+  ...item,
+  name: item.name || 'Unnamed', // Name is a string, no localization needed
+  description: item.description || 'No description', // Description is a string
+  category: item.category
+    ? {
+        ...item.category,
+        name: item.category.name[lang] || item.category.name.en || 'No category',
+      }
+    : null,
+});
 
 const loadFoodItems = async (params = {}) => {
   setLoading(true);
@@ -794,16 +848,19 @@ const loadFoodItems = async (params = {}) => {
       page: params.page || foodItemsPagination.currentPage,
       limit: params.limit || 10,
       search: params.search || searchTerm,
-      includeInactive: true // For admin dashboard
+      includeInactive: true,
+      lang: apiService.language,
     };
     const response = await apiService.getFoodItems(queryParams);
-    setFoodItems(response.items || []);
+    console.log('Food Items Response:', response);
+    setFoodItems(response.items.map(item => getLocalizedFoodItem(item, apiService.language)) || []);
     setFoodItemsPagination({
       currentPage: response.currentPage || 1,
-      totalPages: response.totalPages || Math.ceil(response.count / (queryParams.limit || 10)),
+      totalPages: response.totalPages || Math.ceil(response.totalItems / (queryParams.limit || 10)),
       totalItems: response.totalItems || response.count,
     });
   } catch (error) {
+    console.error('Error loading food items:', error);
     showNotificationDialog('Error', 'Error loading menu items: ' + error.message, 'error');
   } finally {
     setLoading(false);
@@ -841,26 +898,26 @@ const loadFoodItems = async (params = {}) => {
     const response = await apiService.getBanners(params);
     setBanners(response.data || []);
   };
- const loadOrders = async (params = {}) => {
-  setLoading(true);
-  try {
-    const queryParams = {
-      page: params.page || 1,
-      limit: params.limit || 10,
-    };
-    const response = await apiService.getOrders(queryParams);
-    setOrders(response.orders || []);
-    setOrderPagination({
-      currentPage: response.currentPage,
-      totalPages: response.totalPages,
-      totalOrders: response.totalOrders,
-    });
-  } catch (error) {
-    showNotificationDialog('Error', 'Error loading orders: ' + error.message, 'error');
-  } finally {
-    setLoading(false);
-  }
-};
+  const loadOrders = async (params = {}) => {
+    setLoading(true);
+    try {
+      const queryParams = {
+        page: params.page || 1,
+        limit: params.limit || 10,
+      };
+      const response = await apiService.getOrders(queryParams);
+      setOrders(response.orders || []);
+      setOrderPagination({
+        currentPage: response.currentPage,
+        totalPages: response.totalPages,
+        totalOrders: response.totalOrders,
+      });
+    } catch (error) {
+      showNotificationDialog('Error', 'Error loading orders: ' + error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -880,13 +937,13 @@ const loadFoodItems = async (params = {}) => {
   };
 
   // Utility functions
-const formatCurrency = useCallback((amount, currency = 'EUR') => {
-  if (isNaN(amount)) return '€0.00'; // handle invalid input gracefully
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-  }).format(amount);
-}, []);
+  const formatCurrency = useCallback((amount, currency = 'EUR') => {
+    if (isNaN(amount)) return '€0.00'; // handle invalid input gracefully
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+    }).format(amount);
+  }, []);
 
   const formatDate = useCallback((dateString) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -918,11 +975,11 @@ const formatCurrency = useCallback((amount, currency = 'EUR') => {
     setShowModal(true);
   }, []);
 
-const closeModal = useCallback(() => {
-  setShowModal(false);
-  setEditingItem(null);
-  setModalType('');
-}, []);
+  const closeModal = useCallback(() => {
+    setShowModal(false);
+    setEditingItem(null);
+    setModalType('');
+  }, []);
 
   // CRUD operations
   const handleSave = async (data, type) => {
@@ -968,7 +1025,7 @@ const closeModal = useCallback(() => {
   };
 
   const handleDelete = async (id, type) => {
-    console.log('Deleting', type, 'with ID:', id);
+    console.log('Deleting', type, 'with IDs:', id);
     showConfirmDialog(
       'Confirm Deletion',
       `Are you sure you want to delete this ${type}? This action cannot be undone.`,
@@ -976,8 +1033,9 @@ const closeModal = useCallback(() => {
         setLoading(true);
         try {
           switch (type) {
-            case 'categorie':
-              await apiService.deleteCategory(id);
+            case 'categorie': // Fixed typo from 'categorie'
+            await apiService.deleteCategory(id);
+            break;
               break;
             case 'menu item':
               await apiService.deleteFoodItem(id);
@@ -1016,11 +1074,11 @@ const closeModal = useCallback(() => {
   const router = useRouter();
 
   // Navigation items
-const [foodItemsPagination, setFoodItemsPagination] = useState({
-  currentPage: 1,
-  totalPages: 1,
-  totalItems: 0,
-});
+  const [foodItemsPagination, setFoodItemsPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+  });
   const navigationItems = [
     { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, gradient: 'from-blue-500 to-indigo-600' },
     { id: 'categories', name: 'Categories', icon: Grid3X3, gradient: 'from-emerald-500 to-teal-600' },
@@ -1157,16 +1215,13 @@ const [foodItemsPagination, setFoodItemsPagination] = useState({
   // Enhanced Food Item Form
   const FoodItemForm = () => {
     const [formData, setFormData] = useState({
-      // Basic Information
-      name: editingItem?.name || '',
-      description: editingItem?.description || '',
+      name: editingItem?.name || { en: '', es: '', ca: '', ar: '' },
+      description: editingItem?.description || { en: '', es: '', ca: '', ar: '' },
       price: editingItem?.price || 0,
       originalPrice: editingItem?.originalPrice || 0,
       imageUrl: editingItem?.imageUrl || '',
       images: editingItem?.images || [],
       category: editingItem?.category?._id || '',
-
-      // Food Properties
       isVeg: editingItem?.isVeg || false,
       isVegan: editingItem?.isVegan || false,
       isGlutenFree: editingItem?.isGlutenFree || false,
@@ -1176,24 +1231,16 @@ const [foodItemsPagination, setFoodItemsPagination] = useState({
       isPopular: editingItem?.isPopular || false,
       isActive: editingItem?.isActive !== false,
       isAvailable: editingItem?.isAvailable !== false,
-
-      // Stock & Business
       preparationTime: editingItem?.preparationTime || 15,
       stockQuantity: editingItem?.stockQuantity || 0,
       lowStockAlert: editingItem?.lowStockAlert || 10,
-      sku: editingItem?.sku || '',
-      barcode: editingItem?.barcode || '',
-
-      // Product Details
+      sku: editingItem?.sku || `SKU-${Date.now()}`,
+      barcode: editingItem?.barcode || `BC-${Date.now()}`,
       servingSize: editingItem?.servingSize || '',
       weight: editingItem?.weight || 0,
-      tags: editingItem?.tags?.join(', ') || '',
-
-      // Availability
+      tags: editingItem?.tags?.map(tag => tag.en).join(', ') || '',
       availableFrom: editingItem?.availableFrom ? new Date(editingItem.availableFrom).toISOString().slice(0, 16) : '',
       availableUntil: editingItem?.availableUntil ? new Date(editingItem.availableUntil).toISOString().slice(0, 16) : '',
-
-      // Enhanced fields
       mealSizes: editingItem?.mealSizes || [],
       extras: editingItem?.extras || [],
       addons: editingItem?.addons || [],
@@ -1206,72 +1253,120 @@ const [foodItemsPagination, setFoodItemsPagination] = useState({
         fat: 0,
         fiber: 0,
         sugar: 0,
-        sodium: 0
+        sodium: 0,
       },
-
-      // SEO Data
       seoData: editingItem?.seoData || {
-        metaTitle: '',
-        metaDescription: '',
-        keywords: []
-      }
+        metaTitle: { en: '', es: '', ca: '', ar: '' },
+        metaDescription: { en: '', es: '', ca: '', ar: '' },
+        keywords: [],
+      },
     });
 
-    // Form array configurations
+    const languages = [
+      { code: 'en', label: 'English' },
+      { code: 'es', label: 'Spanish' },
+      { code: 'ca', label: 'Catalan' },
+      { code: 'ar', label: 'Arabic' },
+    ];
+
+    // Form array configurations for multilingual fields
     const mealSizeConfig = {
-      defaultItem: () => ({ name: '', additionalPrice: 0 }),
+      defaultItem: () => ({
+        name: { en: '', es: '', ca: '', ar: '' },
+        additionalPrice: 0,
+      }),
       fields: [
-        { key: 'name', label: 'Size Name', type: 'text', placeholder: 'e.g., Large, Family Size' },
-        { key: 'additionalPrice', label: 'Price', type: 'number',  placeholder: 'For default, keep price 0 (main price already applies)',
- }
-      ]
+        ...languages.map(lang => ({
+          key: `name.${lang.code}`,
+          label: `Size Name (${lang.label})`,
+          type: 'text',
+          placeholder: `e.g., Large, Family Size in ${lang.label}`,
+        })),
+        {
+          key: 'additionalPrice',
+          label: 'Price',
+          type: 'number',
+          placeholder: 'For default, keep price 0 (main price already applies)',
+        },
+      ],
     };
 
     const extrasConfig = {
-      defaultItem: () => ({ name: '', price: 0 }),
+      defaultItem: () => ({
+        name: { en: '', es: '', ca: '', ar: '' },
+        price: 0,
+      }),
       fields: [
-        { key: 'name', label: 'Extra Name', type: 'text', placeholder: 'e.g., Extra Cheese, Extra Sauce' },
-        { key: 'price', label: 'Price', type: 'number' }
-      ]
+        ...languages.map(lang => ({
+          key: `name.${lang.code}`,
+          label: `Extra Name (${lang.label})`,
+          type: 'text',
+          placeholder: `e.g., Extra Cheese, Extra Sauce in ${lang.label}`,
+        })),
+        { key: 'price', label: 'Price', type: 'number' },
+      ],
     };
 
     const addonsConfig = {
-      defaultItem: () => ({ name: '', price: 0, imageUrl: '' }),
+      defaultItem: () => ({
+        name: { en: '', es: '', ca: '', ar: '' },
+        price: 0,
+        imageUrl: '',
+      }),
       fields: [
-        { key: 'name', label: 'Addon Name', type: 'text', placeholder: 'e.g., Coca-Cola, French Fries' },
+        ...languages.map(lang => ({
+          key: `name.${lang.code}`,
+          label: `Addon Name (${lang.label})`,
+          type: 'text',
+          placeholder: `e.g., Coca-Cola, French Fries in ${lang.label}`,
+        })),
         { key: 'price', label: 'Price', type: 'number' },
-        { key: 'imageUrl', label: 'Image', type: 'image' }
-      ]
+        { key: 'imageUrl', label: 'Image', type: 'image' },
+      ],
     };
 
     const handleSubmit = (e) => {
       e.preventDefault();
       const submitData = {
         ...formData,
-        tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-        ingredients: formData.ingredients.filter(ingredient => ingredient.name?.trim()),
+        tags: formData.tags
+          .split(',')
+          .map(tag => tag.trim())
+          .filter(tag => tag)
+          .map(tag => ({
+            en: tag,
+            es: tag, // You can enhance this to accept different translations
+            ca: tag,
+            ar: tag,
+          })),
+        ingredients: formData.ingredients
+          .filter(ingredient => ingredient.name?.en?.trim())
+          .map(ingredient => ({
+            name: {
+              en: ingredient.name.en || '',
+              es: ingredient.name.es || ingredient.name.en,
+              ca: ingredient.name.ca || ingredient.name.en,
+              ar: ingredient.name.ar || ingredient.name.en,
+            },
+            optional: ingredient.optional,
+          })),
         allergens: formData.allergens.filter(allergen => allergen?.trim()),
         availableFrom: formData.availableFrom ? new Date(formData.availableFrom).toISOString() : null,
         availableUntil: formData.availableUntil ? new Date(formData.availableUntil).toISOString() : null,
         seoData: {
           ...formData.seoData,
-          keywords: typeof formData.seoData.keywords === 'string'
-            ? formData.seoData.keywords.split(',').map(k => k.trim()).filter(k => k)
-            : formData.seoData.keywords
-        }
+          keywords: formData.seoData.keywords
+            .map(k => ({
+              en: k.en || k,
+              es: k.es || k.en || k,
+              ca: k.ca || k.en || k,
+              ar: k.ar || k.en || k,
+            }))
+            .filter(k => k.en),
+        },
       };
       handleSave(submitData, 'menu-item');
     };
-useEffect(() => {
-  if (!editingItem) {
-    const currentTime = Date.now();
-    setFormData(prev => ({
-      ...prev,
-      sku: `SKU-${currentTime}`,
-      barcode: `BC-${currentTime}`,
-    }));
-  }
-}, [editingItem]);
 
     return (
       <form onSubmit={handleSubmit} className="space-y-8">
@@ -1282,45 +1377,65 @@ useEffect(() => {
             Basic Information
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Item Name *</label>
-              <input
-                type="text"
-                required
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter item name"
-              />
-            </div>
+            {languages.map(lang => (
+              <div key={lang.code}>
+                <label className="block text-sm font-semibold text-gray-800 mb-3">
+                  Item Name ({lang.label}) {lang.code === 'en' && '*'}
+                </label>
+                <input
+                  type="text"
+                  required={lang.code === 'en'}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                  value={formData.name[lang.code]}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      name: { ...formData.name, [lang.code]: e.target.value },
+                    })
+                  }
+                  placeholder={`Enter item name in ${lang.label}`}
+                />
+              </div>
+            ))}
             <div>
               <label className="block text-sm font-semibold text-gray-800 mb-3">Category *</label>
-              <select
-                required
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              >
-                <option value="">Select category</option>
-                {categories.map((cat) => (
-                  <option key={cat._id} value={cat._id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
+   <select
+  required
+  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+  value={formData.category}
+  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+>
+  <option value="">Select category</option>
+  {categories.map((cat) => (
+    <option key={cat._id} value={cat._id}>
+      {cat.name || 'Unnamed'}
+    </option>
+  ))}
+</select>
             </div>
           </div>
 
-          <div className="mt-6">
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Description *</label>
-            <textarea
-              rows="4"
-              required
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none bg-white"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Item description"
-            />
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {languages.map(lang => (
+              <div key={lang.code}>
+                <label className="block text-sm font-semibold text-gray-800 mb-3">
+                  Description ({lang.label}) {lang.code === 'en' && '*'}
+                </label>
+                <textarea
+                  rows="4"
+                  required={lang.code === 'en'}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none bg-white"
+                  value={formData.description[lang.code]}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      description: { ...formData.description, [lang.code]: e.target.value },
+                    })
+                  }
+                  placeholder={`Item description in ${lang.label}`}
+                />
+              </div>
+            ))}
           </div>
 
           <div className="mt-6">
@@ -1335,16 +1450,17 @@ useEffect(() => {
             <label className="block text-sm font-semibold text-gray-800 mb-3">Additional Images</label>
             <ImageUpload
               value={formData.images}
-              onChange={(urls) => setFormData({
-                ...formData,
-                images: urls.map(url => ({ url, alt: formData.name }))
-              })}
+              onChange={(urls) =>
+                setFormData({
+                  ...formData,
+                  images: urls.map(url => ({ url, alt: { en: formData.name.en, es: formData.name.es, ca: formData.name.ca, ar: formData.name.ar } })),
+                })
+              }
               multiple={true}
             />
           </div>
         </div>
 
-        {/* Pricing & Stock */}
         <div className="bg-gradient-to-br from-emerald-50 to-white p-6 rounded-2xl border border-emerald-200">
           <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
             <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
@@ -1432,149 +1548,25 @@ useEffect(() => {
           </div>
         </div>
 
+
         {/* Product Details */}
         <div className="bg-gradient-to-br from-orange-50 to-white p-6 rounded-2xl border border-orange-200">
           <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
             <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
             Product Details
           </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Serving Size</label>
-              <input
-                type="text"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all bg-white"
-                value={formData.servingSize}
-                onChange={(e) => setFormData({ ...formData, servingSize: e.target.value })}
-                placeholder="e.g., 1 burger, 2 pieces, serves 4"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Weight (grams)</label>
-              <input
-                type="number"
-                min="0"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all bg-white"
-                value={formData.weight}
-                onChange={(e) => setFormData({ ...formData, weight: parseInt(e.target.value) || 0 })}
-              />
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Tags (comma-separated)</label>
-            <input
-              type="text"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all bg-white"
-              value={formData.tags}
-              onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-              placeholder="spicy, popular, healthy, bestseller, chef-special"
-            />
-          </div>
-        </div>
-
-        {/* Food Properties */}
-        <div className="bg-gradient-to-br from-purple-50 to-white p-6 rounded-2xl border border-purple-200">
-          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-            Food Properties & Status
-          </h4>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
-            {[
-              { key: 'isVeg', label: 'Vegetarian', desc: 'Contains no meat' },
-              { key: 'isVegan', label: 'Vegan', desc: 'Plant-based only' },
-              { key: 'isGlutenFree', label: 'Gluten Free', desc: 'No gluten ingredients' },
-              { key: 'isNutFree', label: 'Nut Free', desc: 'Safe from nuts' },
-              { key: 'isFeatured', label: 'Featured Item', desc: 'Show on homepage' },
-              { key: 'isPopular', label: 'Popular', desc: 'Mark as popular choice' },
-              { key: 'isActive', label: 'Active', desc: 'Available for ordering' },
-              { key: 'isAvailable', label: 'Available', desc: 'Currently in stock' },
-            ].map(({ key, label, desc }) => (
-              <div key={key} className="bg-white p-4 rounded-xl border border-gray-200">
-                <div className="flex items-center gap-3 mb-2">
-                  <input
-                    type="checkbox"
-                    id={key}
-                    checked={formData[key]}
-                    onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })}
-                    className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                  />
-                  <label htmlFor={key} className="text-sm font-semibold text-gray-800">
-                    {label}
-                  </label>
-                </div>
-                <p className="text-xs text-gray-500 ml-8">{desc}</p>
-              </div>
-            ))}
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Spice Level</label>
-            <select
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
-              value={formData.spiceLevel}
-              onChange={(e) => setFormData({ ...formData, spiceLevel: e.target.value })}
-            >
-              <option value="none">None</option>
-              <option value="mild">Mild 🌶️</option>
-              <option value="medium">Medium 🌶️🌶️</option>
-              <option value="hot">Hot 🌶️🌶️🌶️</option>
-              <option value="very-hot">Very Hot 🌶️🌶️🌶️🌶️</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Availability Schedule */}
-        <div className="bg-gradient-to-br from-cyan-50 to-white p-6 rounded-2xl border border-cyan-200">
-          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-cyan-500 rounded-full"></div>
-            Availability Schedule
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Available From</label>
-              <input
-                type="datetime-local"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all bg-white"
-                value={formData.availableFrom}
-                onChange={(e) => setFormData({ ...formData, availableFrom: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Available Until</label>
-              <input
-                type="datetime-local"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all bg-white"
-                value={formData.availableUntil}
-                onChange={(e) => setFormData({ ...formData, availableUntil: e.target.value })}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Meal Sizes */}
-        <div className="bg-gradient-to-br from-indigo-50 to-white p-6 rounded-2xl border border-indigo-200">
           <FormArrayField
             items={formData.mealSizes}
             onChange={(mealSizes) => setFormData({ ...formData, mealSizes })}
             fieldConfig={mealSizeConfig}
             title="Meal Sizes"
           />
-        </div>
-
-        {/* Extras */}
-        <div className="bg-gradient-to-br from-pink-50 to-white p-6 rounded-2xl border border-pink-200">
           <FormArrayField
             items={formData.extras}
             onChange={(extras) => setFormData({ ...formData, extras })}
             fieldConfig={extrasConfig}
             title="Extras"
           />
-        </div>
-
-        {/* Addons */}
-        <div className="bg-gradient-to-br from-teal-50 to-white p-6 rounded-2xl border border-teal-200">
           <FormArrayField
             items={formData.addons}
             onChange={(addons) => setFormData({ ...formData, addons })}
@@ -1583,193 +1575,73 @@ useEffect(() => {
           />
         </div>
 
-        {/* Nutrition Information */}
-        <div className="bg-gradient-to-br from-lime-50 to-white p-6 rounded-2xl border border-lime-200">
-          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-lime-500 rounded-full"></div>
-            Nutrition Information (per serving)
-          </h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Object?.keys(formData?.nutrition)?.map((key) => (
-              <div key={key} className="bg-white p-4 rounded-xl border border-gray-200">
-                <label className="block text-xs font-bold text-gray-700 mb-2 capitalize">
-                  {key === 'calories' ? 'Calories' : `${key} (g)`}
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-1 focus:ring-lime-500 focus:border-lime-500 transition-all bg-white"
-                  value={formData.nutrition[key]}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    nutrition: {
-                      ...formData.nutrition,
-                      [key]: parseFloat(e.target.value) || 0
-                    }
-                  })}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Ingredients */}
-        <div className="bg-gradient-to-br from-yellow-50 to-white p-6 rounded-2xl border border-yellow-200">
-          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-            Ingredients
-          </h4>
-          <div className="space-y-3">
-            {formData.ingredients.map((ingredient, index) => (
-              <div key={index} className="flex items-center gap-3 bg-white p-4 rounded-xl border border-gray-200">
-                <input
-                  type="text"
-                  className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-all bg-white"
-                  value={ingredient.name || ''}
-                  onChange={(e) => {
-                    const newIngredients = [...formData.ingredients];
-                    newIngredients[index] = { ...ingredient, name: e.target.value };
-                    setFormData({ ...formData, ingredients: newIngredients });
-                  }}
-                  placeholder="Ingredient name"
-                />
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={ingredient.optional || false}
-                    onChange={(e) => {
-                      const newIngredients = [...formData.ingredients];
-                      newIngredients[index] = { ...ingredient, optional: e.target.checked };
-                      setFormData({ ...formData, ingredients: newIngredients });
-                    }}
-                    className="w-4 h-4 rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
-                  />
-                  <span className="font-medium text-gray-700">Optional</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newIngredients = formData.ingredients.filter((_, i) => i !== index);
-                    setFormData({ ...formData, ingredients: newIngredients });
-                  }}
-                  className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-all duration-200"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={() => setFormData({
-                ...formData,
-                ingredients: [...formData.ingredients, { name: '', optional: false }]
-              })}
-              className="text-yellow-700 hover:text-yellow-900 text-sm flex items-center gap-2 transition-colors bg-white p-3 rounded-xl border-2 border-dashed border-yellow-200 hover:border-yellow-300 w-full justify-center"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Ingredient</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Allergens */}
-        <div className="bg-gradient-to-br from-red-50 to-white p-6 rounded-2xl border border-red-200">
-          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-            Allergens
-          </h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {['nuts', 'dairy', 'eggs', 'soy', 'wheat', 'fish', 'shellfish', 'sesame'].map((allergen) => (
-              <label key={allergen} className="flex items-center gap-3 text-sm bg-white p-4 rounded-xl border border-gray-200 hover:border-red-200 transition-colors cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.allergens.includes(allergen)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setFormData({
-                        ...formData,
-                        allergens: [...formData.allergens, allergen]
-                      });
-                    } else {
-                      setFormData({
-                        ...formData,
-                        allergens: formData.allergens.filter(a => a !== allergen)
-                      });
-                    }
-                  }}
-                  className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                />
-                <span className="capitalize font-medium text-gray-700">{allergen}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
         {/* SEO Data */}
-        <div className="bg-gradient-to-br from-violet-50 to-white p-6 rounded-2xl border border-violet-200">
+        <div className="bg-gradient-to-br from-purple-50 to-white p-6 rounded-2xl border border-purple-200">
           <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-violet-500 rounded-full"></div>
-            SEO Information
+            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+            SEO Data
           </h4>
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Meta Title</label>
+          {languages.map(lang => (
+            <div key={lang.code} className="mb-4">
+              <label className="block text-sm font-semibold text-gray-800 mb-3">
+                Meta Title ({lang.label})
+              </label>
               <input
                 type="text"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all bg-white"
-                value={formData.seoData.metaTitle}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  seoData: { ...formData.seoData, metaTitle: e.target.value }
-                })}
-                placeholder="SEO-friendly title"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
+                value={formData.seoData.metaTitle[lang.code]}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    seoData: {
+                      ...formData.seoData,
+                      metaTitle: { ...formData.seoData.metaTitle, [lang.code]: e.target.value },
+                    },
+                  })
+                }
+                placeholder={`Meta title in ${lang.label}`}
               />
             </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Meta Description</label>
+          ))}
+          {languages.map(lang => (
+            <div key={lang.code} className="mb-4">
+              <label className="block text-sm font-semibold text-gray-800 mb-3">
+                Meta Description ({lang.label})
+              </label>
               <textarea
-                rows="3"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all resize-none bg-white"
-                value={formData.seoData.metaDescription}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  seoData: { ...formData.seoData, metaDescription: e.target.value }
-                })}
-                placeholder="SEO meta description"
+                rows="4"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all resize-none bg-white"
+                value={formData.seoData.metaDescription[lang.code]}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    seoData: {
+                      ...formData.seoData,
+                      metaDescription: { ...formData.seoData.metaDescription, [lang.code]: e.target.value },
+                    },
+                  })
+                }
+                placeholder={`Meta description in ${lang.label}`}
               />
             </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Keywords (comma-separated)</label>
-              <input
-                type="text"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all bg-white"
-                value={Array.isArray(formData.seoData.keywords) ? formData.seoData.keywords.join(', ') : formData.seoData.keywords}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  seoData: { ...formData.seoData, keywords: e.target.value }
-                })}
-                placeholder="SEO keywords"
-              />
-            </div>
-          </div>
+          ))}
         </div>
 
-        <div className="flex justify-end gap-4 pt-8 border-t border-gray-200">
+        <div className="flex justify-end gap-4">
           <button
             type="button"
             onClick={closeModal}
-            className="px-8 py-4 text-gray-700 bg-gray-100 rounded-2xl hover:bg-gray-200 font-semibold transition-all duration-200 hover:scale-[0.98]"
+            className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-medium"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 flex items-center gap-3 font-semibold transition-all duration-200 hover:scale-[0.98] shadow-lg shadow-blue-200"
+            className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium flex items-center gap-2"
           >
             {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-            <span>{editingItem ? 'Update' : 'Create'} Item</span>
+            Save
           </button>
         </div>
       </form>
@@ -1778,109 +1650,137 @@ useEffect(() => {
 
   // Enhanced Category Form Component
   const CategoryForm = () => {
+
+
+
     const [formData, setFormData] = useState({
-      name: editingItem?.name || '',
-      description: editingItem?.description || '',
+      name: editingItem?.name || { en: '', es: '', ca: '', ar: '' },
+      description: editingItem?.description || { en: '', es: '', ca: '', ar: '' },
       imageUrl: editingItem?.imageUrl || '',
-      icon: editingItem?.icon || '',
+      icon: editingItem?.icon || '🍔',
       isActive: editingItem?.isActive !== false,
-      sortOrder: editingItem?.sortOrder || 0
+      sortOrder: editingItem?.sortOrder || 0,
     });
+
+    const languages = [
+      { code: 'en', label: 'English' },
+      { code: 'es', label: 'Spanish' },
+      { code: 'ca', label: 'Catalan' },
+      { code: 'ar', label: 'Arabic' },
+    ];
 
     const handleSubmit = (e) => {
       e.preventDefault();
+      console.log('Submitting category data:', formData); // Debug log
+
       handleSave(formData, 'category');
     };
 
     return (
       <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-2xl border border-blue-200">
+        <div className="bg-gradient-to-br from-gray-50 to-white p-6 rounded-2xl border border-gray-200">
           <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            Category Details
+            Category Information
           </h4>
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Category Name *</label>
-              <input
-                type="text"
-                required
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter category name"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Description</label>
-              <textarea
-                rows="4"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none bg-white"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Category description"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-3">Icon</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {languages.map(lang => (
+              <div key={lang.code}>
+                <label className="block text-sm font-semibold text-gray-800 mb-3">
+                  Name ({lang.label}) {lang.code === 'en' && '*'}
+                </label>
                 <input
                   type="text"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-                  value={formData.icon}
-                  onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                  placeholder=""
+                  required={lang.code === 'en'}
+                  className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white ${lang.code === 'ar' ? 'text-right' : ''}`}
+                  value={formData.name[lang.code]}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      name: { ...formData.name, [lang.code]: e.target.value },
+                    })
+                  }
+                  placeholder={`Enter category name in ${lang.label}`}
+                  lang={lang.code}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-3">Sort Order</label>
-                <input
-                  type="number"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-                  value={formData.sortOrder}
-                  onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) })}
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Category Image</label>
-              <ImageUpload
-                value={formData.imageUrl}
-                onChange={(url) => setFormData({ ...formData, imageUrl: url })}
-              />
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-gray-200">
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={formData.isActive}
-                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                  className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label htmlFor="isActive" className="text-sm font-semibold text-gray-800">
-                  Active Category
+            ))}
+          </div>
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {languages.map(lang => (
+              <div key={lang.code}>
+                <label className="block text-sm font-semibold text-gray-800 mb-3">
+                  Description ({lang.label}) {lang.code === 'en' && '*'}
                 </label>
+                <textarea
+                  rows="4"
+                  required={lang.code === 'en'}
+                  className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none bg-white ${lang.code === 'ar' ? 'text-right' : ''}`}
+                  value={formData.description[lang.code]}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      description: { ...formData.description, [lang.code]: e.target.value },
+                    })
+                  }
+                  placeholder={`Enter category description in ${lang.label}`}
+                  lang={lang.code}
+                />
               </div>
-              <p className="text-xs text-gray-500 ml-8 mt-1">Make this category visible to customers</p>
-            </div>
+            ))}
+          </div>
+          <div className="mt-6">
+            <label className="block text-sm font-semibold text-gray-800 mb-3">Image URL</label>
+            <ImageUpload
+              value={formData.imageUrl}
+              onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+            />
+          </div>
+          <div className="mt-6">
+            <label className="block text-sm font-semibold text-gray-800 mb-3">Icon</label>
+            <input
+              type="text"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+              value={formData.icon}
+              onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+              placeholder="Enter emoji or icon code"
+            />
+          </div>
+          <div className="mt-6 flex items-center gap-4">
+            <input
+              type="checkbox"
+              checked={formData.isActive}
+              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label className="text-sm font-semibold text-gray-800">Active</label>
+          </div>
+          <div className="mt-6">
+            <label className="block text-sm font-semibold text-gray-800 mb-3">Sort Order</label>
+            <input
+              type="number"
+              min="0"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+              value={formData.sortOrder}
+              onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
+            />
           </div>
         </div>
         <div className="flex justify-end gap-4">
           <button
             type="button"
             onClick={closeModal}
-            className="px-8 py-4 text-gray-700 bg-gray-100 rounded-2xl hover:bg-gray-200 font-semibold transition-all duration-200 hover:scale-[0.98]"
+            className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-medium"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 flex items-center gap-3 font-semibold transition-all duration-200 hover:scale-[0.98] shadow-lg shadow-blue-200"
+            className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium flex items-center gap-2"
           >
             {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-            <span>{editingItem ? 'Update' : 'Create'} Category</span>
+            Save
           </button>
         </div>
       </form>
@@ -2064,84 +1964,94 @@ useEffect(() => {
       </form>
     );
   };
-const OrderDetails = ({ order }) => {
-  return (
-    <div className="space-y-8">
-      <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-2xl border border-blue-200">
-        <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-          Order Details
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">Order Number</label>
-            <p className="text-gray-900">{order.orderNumber || `#${order._id?.slice(-6)}`}</p>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">Customer</label>
-            <p className="text-gray-900">{order.userId?.fullName || order.customerName || 'Unknown'}</p>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">Phone</label>
-            <p className="text-gray-900">{order.userId?.phone || 'N/A'}</p>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">Delivery Type</label>
-            <p className="text-gray-900">{order.deliveryType || 'Pickup'}</p>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">Total</label>
-            <p className="text-gray-900">{formatCurrency(order.total)}</p>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">Status</label>
-            <p
-              className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(
-                order.status
-              )}`}
-            >
-              {order.status}
-            </p>
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-semibold text-gray-800 mb-2">Order Items</label>
-            <div className="space-y-2">
-              {order.items?.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100"
-                >
-                  <div>
+  const OrderDetails = ({ order }) => {
+    return (
+      <div className="space-y-8">
+        <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-2xl border border-blue-200">
+          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+            Order Details
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">Order Number</label>
+              <p className="text-gray-900">{order.orderNumber || `#${order._id?.slice(-6)}`}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">Customer</label>
+              <p className="text-gray-900">{order.userId?.fullName || order.customerName || 'Unknown'}</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">Phone</label>
+              <p className="text-gray-900">{order.userId?.phone || 'N/A'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                Delivery Address
+              </label>
+              {order.deliveryType === 'delivery' ? (
+                <p className="font-semibold text-gray-900">{order.deliveryAddress.address},<br></br>{order.deliveryAddress.apartment}</p>
+              ) : (
+                <p className="text-gray-900">Pickup</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">Total</label>
+              <p className="text-gray-900">{formatCurrency(order.total)}</p>
+
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">Status</label>
+              <p
+                className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(
+                  order.status
+                )}`}
+              >
+                {order.status}
+              </p>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-800 mb-2">Order Items</label>
+              <div className="space-y-2">
+                {order.items?.map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {item.foodItem?.name || 'Unknown Item'}
+                      </p>
+                      <p className="text-xs text-gray-500">Quantity: {item.quantity}</p>
+                      <p className="text-xs text-gray-500">Special Instruction: {item.specialInstructions}</p>
+
+                    </div>
                     <p className="text-sm font-medium text-gray-900">
-                      {item.foodItem?.name || 'Unknown Item'}
+                      {formatCurrency(item.totalPrice)}
                     </p>
-                    <p className="text-xs text-gray-500">Quantity: {item.quantity}</p>
                   </div>
-                  <p className="text-sm font-medium text-gray-900">
-                    {formatCurrency(item.totalPrice )}
-                  </p>
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">Created At</label>
+              <p className="text-gray-900">{formatDate(order.createdAt)}</p>
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">Created At</label>
-            <p className="text-gray-900">{formatDate(order.createdAt)}</p>
-          </div>
+        </div>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={closeModal}
+            className="px-8 py-4 text-gray-700 bg-gray-100 rounded-2xl hover:bg-gray-200 font-semibold transition-all duration-200 hover:scale-[0.98]"
+          >
+            Close
+          </button>
         </div>
       </div>
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={closeModal}
-          className="px-8 py-4 text-gray-700 bg-gray-100 rounded-2xl hover:bg-gray-200 font-semibold transition-all duration-200 hover:scale-[0.98]"
-        >
-          Close
-        </button>
-      </div>
-    </div>
-  );
-};
+    );
+  };
   const SettingsForm = () => {
     const [formData, setFormData] = useState(settings);
 
@@ -2259,11 +2169,11 @@ const OrderDetails = ({ order }) => {
   };
 
   // Enhanced Data Grid Component
- const DataGrid = ({ data, title, columns,onEdit,onDelete, actions,onAdd, pagination, onPageChange }) => {
-  return (
-    <div className="space-y-6">
-     
-         <div className="flex justify-between items-center mb-6">
+  const DataGrid = ({ data, title, columns, onEdit, onDelete, actions, onAdd, pagination, onPageChange }) => {
+    return (
+      <div className="space-y-6">
+
+        <div className="flex justify-between items-center mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
             <p className="text-sm text-gray-600 mt-1">Manage your {title.toLowerCase()}</p>
@@ -2278,88 +2188,88 @@ const OrderDetails = ({ order }) => {
             </button>
           )}
         </div>
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-gray-50">
-              {columns.map((col) => (
-                <th key={col.header} className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                  {col.header}
-                </th>
-              ))}
-              {actions.length > 0 && <th className="px-4 py-3 text-right">Actions</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((item) => (
-              <tr key={item._id} className="border-t border-gray-200">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-gray-50">
                 {columns.map((col) => (
-                  <td key={col.key} className="px-4 py-4">
-                    {col.render ? col.render(item) : item[col.key]}
-                  </td>
+                  <th key={col.header} className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                    {col.header}
+                  </th>
                 ))}
-               <td className="px-8 py-6 text-right">
-                  <div className="flex items-center gap-2 justify-end">
-                    {actions && actions.map((action, actionIndex) => (
-                      <button
-                        key={actionIndex}
-                        onClick={() => action.onClick(item)}
-                        className={`p-2 rounded-xl hover:bg-${action.color}-50 transition-all duration-200 text-${action.color}-600 hover:text-${action.color}-900 hover:scale-110`}
-                        title={action.label}
-                      >
-                        <action.icon className="w-4 h-4" />
-                      </button>
-                    ))}
-                    <button
-                      onClick={() => onEdit(item)}
-                      className="p-2 rounded-xl text-blue-600 hover:text-blue-900 hover:bg-blue-50 transition-all duration-200 hover:scale-110"
-                      title="Edit"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </button>
-                    {onDelete && (
-                      <button
-                        onClick={() => onDelete(item._id || item.id, title.toLowerCase().slice(0, -1))}
-                        className="p-2 rounded-xl text-red-600 hover:text-red-900 hover:bg-red-50 transition-all duration-200 hover:scale-110"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </td>
+                {actions.length > 0 && <th className="px-4 py-3 text-right">Actions</th>}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {/* Pagination */}
-      {pagination && (
-        <div className="flex justify-center items-center gap-4 mt-4">
-          <button
-            onClick={() => onPageChange(pagination.currentPage - 1)}
-            disabled={pagination.currentPage === 1}
-            className="px-4 py-2 bg-gray-100 rounded-lg disabled:opacity-50 hover:bg-gray-200"
-          >
-            Previous
-          </button>
-          <span className="text-sm font-medium">
-            Page {pagination.currentPage} of {pagination.totalPages || 1}
-          </span>
-          <button
-            onClick={() => onPageChange(pagination.currentPage + 1)}
-            disabled={pagination.currentPage >= (pagination.totalPages || 1)}
-            className="px-4 py-2 bg-gray-100 rounded-lg disabled:opacity-50 hover:bg-gray-200"
-          >
-            Next
-          </button>
+            </thead>
+            <tbody>
+              {data.map((item) => (
+                <tr key={item._id} className="border-t border-gray-200">
+                  {columns.map((col) => (
+                    <td key={col.key} className="px-4 py-4">
+                      {col.render ? col.render(item) : item[col.key]}
+                    </td>
+                  ))}
+                  <td className="px-8 py-6 text-right">
+                    <div className="flex items-center gap-2 justify-end">
+                      {actions && actions.map((action, actionIndex) => (
+                        <button
+                          key={actionIndex}
+                          onClick={() => action.onClick(item)}
+                          className={`p-2 rounded-xl hover:bg-${action.color}-50 transition-all duration-200 text-${action.color}-600 hover:text-${action.color}-900 hover:scale-110`}
+                          title={action.label}
+                        >
+                          <action.icon className="w-4 h-4" />
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => onEdit(item)}
+                        className="p-2 rounded-xl text-blue-600 hover:text-blue-900 hover:bg-blue-50 transition-all duration-200 hover:scale-110"
+                        title="Edit"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      {onDelete && (
+                        <button
+                          onClick={() => onDelete(item._id || item.id, title.toLowerCase().slice(0, -1))}
+                          className="p-2 rounded-xl text-red-600 hover:text-red-900 hover:bg-red-50 transition-all duration-200 hover:scale-110"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
-    </div>
-  );
-};
+        {/* Pagination */}
+        {pagination && (
+          <div className="flex justify-center items-center gap-4 mt-4">
+            <button
+              onClick={() => onPageChange(pagination.currentPage - 1)}
+              disabled={pagination.currentPage === 1}
+              className="px-4 py-2 bg-gray-100 rounded-lg disabled:opacity-50 hover:bg-gray-200"
+            >
+              Previous
+            </button>
+            <span className="text-sm font-medium">
+              Page {pagination.currentPage} of {pagination.totalPages || 1}
+            </span>
+            <button
+              onClick={() => onPageChange(pagination.currentPage + 1)}
+              disabled={pagination.currentPage >= (pagination.totalPages || 1)}
+              className="px-4 py-2 bg-gray-100 rounded-lg disabled:opacity-50 hover:bg-gray-200"
+            >
+              Next
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
- const DataGrids = ({ data, columns, onEdit, onDelete, onAdd, title, actions }) => (
+  const DataGrids = ({ data, columns, onEdit, onDelete, onAdd, title, actions }) => (
     <div className="bg-white rounded-3xl shadow-lg border-0 overflow-hidden">
       <div className="p-8 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
         <div className="flex justify-between items-center mb-6">
@@ -2574,7 +2484,7 @@ const OrderDetails = ({ order }) => {
                   gradient: 'from-rose-500 to-pink-600',
                   action: () => setActiveTab('banners')
                 },
-              
+
               ].map((action, index) => (
                 <div
                   key={index}
@@ -2594,65 +2504,97 @@ const OrderDetails = ({ order }) => {
 
       case 'categories':
         return (
-          <DataGrids
-            data={categories}
-            title="Categories"
-            onEdit={(item) => openModal('category', item)}
-            onDelete={handleDelete}
-            onAdd={() => openModal('category')}
-            columns={[
-              {
-                header: 'Image',
-                key: 'imageUrl',
-                render: (item) => (
-                  <div className="relative">
-                    <img
-                      src={item.imageUrl}
-                      alt={item.name}
-                      className="w-20 h-16 object-cover rounded-2xl border-2 border-gray-100"
-                    />
-                  </div>
-                ),
-              },
-              {
-                header: 'Name',
-                key: 'name',
-                render: (item) => (
-                  <div>
-                    <p className="font-bold text-gray-900">{item.name}</p>
-                    <p className="text-xs text-gray-500">{item.icon}</p>
-                  </div>
-                )
-              },
-              {
-                header: 'Description',
-                key: 'description',
-                render: (item) => <div className="max-w-xs text-gray-600">{item.description}</div>,
-              },
-              {
-                header: 'Sort Order',
-                key: 'sortOrder',
-                render: (item) => (
-                  <span className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-xs font-semibold">
-                    {item.sortOrder || 0}
-                  </span>
-                ),
-              },
-              {
-                header: 'Status',
-                key: 'isActive',
-                render: (item) => (
-                  <span
-                    className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${item.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
-                      }`}
-                  >
-                    {item.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                ),
-              },
-            ]}
-          />
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Categories</h2>
+              <button
+                onClick={() => openModal('category')}
+                className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                Add Category
+              </button>
+            </div>
+            <div className="mb-4">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search categories..."
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl"
+              />
+            </div>
+            {loading ? (
+              <div className="text-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
+                <p className="text-sm text-gray-500 mt-2">Loading categories...</p>
+              </div>
+            ) : categories.length === 0 ? (
+              <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                <p className="text-sm">No categories found.</p>
+              </div>
+            ) : (
+              <DataGrids
+                data={categories}
+                title="Categories"
+                onEdit={(item) => openModal('category', item)}
+                onDelete={handleDelete}
+                onAdd={() => openModal('category')}
+                columns={[
+                  {
+                    header: 'Image',
+                    key: 'imageUrl',
+                    render: (item) => (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name[apiService.language] || item.name.en}
+                        className="w-16 h-16 object-cover rounded-xl"
+                      />
+                    ),
+                  },
+                  {
+                    header: 'Name',
+                    key: 'name',
+                    render: (item) => (
+                      <div>
+                        <p className="font-semibold text-gray-900">
+                          {typeof item.name === 'string' ? item.name : (item.name && (item.name[apiService.language] || item.name.en)) || 'Unnamed'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {typeof item.description === 'string' ? item.description : (item.description && (item.description[apiService.language] || item.description.en)) || 'No description'}
+                        </p>
+                      </div>
+                    ),
+                  },
+                  {
+                    header: 'Icon',
+                    key: 'icon',
+                    render: (item) => <span className="text-2xl">{item.icon}</span>,
+                  },
+                  {
+                    header: 'Status',
+                    key: 'isActive',
+                    render: (item) => (
+                      <span
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${item.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
+                          }`}
+                      >
+                        {item.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    ),
+                  },
+                  {
+                    header: 'Sort Order',
+                    key: 'sortOrder',
+                    render: (item) => item.sortOrder,
+                  },
+                ]}
+
+              />
+            )}
+          </div>
         );
+
       case 'banners':
         return (
           <DataGrids
@@ -2744,282 +2686,319 @@ const OrderDetails = ({ order }) => {
             ]}
           />
         );
- case 'menu-items':
-  return (
+      case 'menu-items':
+        return (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Menu Items</h2>
+              <button
+                onClick={() => openModal('menu-item')}
+                className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                Add Item
+              </button>
+            </div>
+            <div className="mb-4">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search menu items..."
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl"
+              />
+            </div>
+            {loading ? (
+              <div className="text-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
+                <p className="text-sm text-gray-500 mt-2">Loading menu items...</p>
+              </div>
+            ) : foodItems.length === 0 ? (
+              <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                <p className="text-sm">No menu items found.</p>
+              </div>
+            ) : (
+              <DataGrid
+                data={foodItems}
+                title="Menu Items"
+                onEdit={(item) => openModal('menu-item', item)}
+                onDelete={(item) => handleDelete(item._id, 'food-item')}
+                pagination={foodItemsPagination}
+                onPageChange={(page) => loadFoodItems({ page })}
+                columns={[
+                  {
+                    header: 'Image',
+                    key: 'imageUrl',
+                    render: (item) => (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name[apiService.language] || item.name.en}
+                        className="w-16 h-16 object-cover rounded-xl"
+                      />
+                    ),
+                  },
+{
+  header: 'Name',
+  key: 'name',
+  render: (item) => (
     <div>
-      {/* Search bar */}
-      <div className="mb-4">
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search menu items..."
-          className="w-full px-4 py-3 border border-gray-200 rounded-xl"
-        />
-      </div>
-      {loading ? (
-        <div className="text-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
-          <p className="text-sm text-gray-500 mt-2">Loading menu items...</p>
-        </div>
-      ) : foodItems.length === 0 ? (
-        <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-          <p className="text-sm">No menu items found.</p>
-        </div>
-      ) : (
-        <DataGrid
-          data={foodItems}
-          title="Menu Items"
-          onEdit={(item) => openModal('menu-item', item)}
-          onDelete={handleDelete}
-          onAdd={() => openModal('menu-item')}
-          pagination={foodItemsPagination}
-          onPageChange={(page) => loadFoodItems({ page })}
-          columns={[
-            {
-              header: 'Image',
-              key: 'imageUrl',
-              render: (item) => (
-                <div className="relative">
-                  <img
-                    src={item.imageUrl}
-                    alt={item.name}
-                    className="w-20 h-16 object-cover rounded-2xl border-2 border-gray-100"
-                  />
-                </div>
-              ),
-            },
-            {
-              header: 'Name',
-              key: 'name',
-              render: (item) => (
-                <div>
-                  <p className="font-bold text-gray-900">{item.name}</p>
-                  <p className="text-xs text-gray-500">{item.category?.name || 'Unknown'}</p>
-                </div>
-              ),
-            },
-            {
-              header: 'Description',
-              key: 'description',
-              render: (item) => <div className="max-w-xs text-gray-600 text-sm">{item.description}</div>,
-            },
-            {
-              header: 'Price',
-              key: 'price',
-              render: (item) => (
-                <div>
-                  <p className="font-bold text-gray-900">{formatCurrency(item.price)}</p>
-                  {item.originalPrice && item.originalPrice > item.price && (
-                    <p className="text-xs text-gray-500 line-through">{formatCurrency(item.originalPrice)}</p>
-                  )}
-                </div>
-              ),
-            },
-            {
-              header: 'Stock',
-              key: 'stockQuantity',
-              render: (item) => (
-                <span
-                  className={`px-3 py-1 text-xs font-semibold rounded-full border ${
-                    item.stockQuantity > 10
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : item.stockQuantity > 0
-                      ? 'bg-amber-50 text-amber-700 border-amber-200'
-                      : 'bg-red-50 text-red-700 border-red-200'
-                  }`}
-                >
-                  {item.stockQuantity || 0}
-                </span>
-              ),
-            },
-            {
-              header: 'Status',
-              key: 'status',
-              render: (item) => (
-                <div className="flex flex-col gap-2">
-                  <span
-                    className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${
-                      item.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
-                    }`}
-                  >
-                    {item.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                  <div className="flex gap-1">
-                    {item.isFeatured && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-700 border border-yellow-200">
-                        <Star className="w-3 h-3 mr-1" />
-                        Featured
-                      </span>
-                    )}
-                    {item.isPopular && (
-                      <span className="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
-                        Popular
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ),
-            },
-          ]}
-          actions={[
-            {
-              icon: Eye,
-              label: 'View Details',
-              color: 'blue',
-              onClick: (item) => {
-                console.log('View item details:', item);
-              },
-            },
-          ]}
-        />
-      )}
+      <p className="font-semibold text-gray-900">{item.name || 'Unnamed'}</p>
+      <p className="text-xs text-gray-500">
+        {item.category ? (item.category.name || 'No category') : 'No category'}
+      </p>
     </div>
-  );
-  
-  
- case 'orders':
-  return (
-    <div>
-      {/* Search bar */}
-      <div className="mb-4">
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search orders..."
-          className="w-full px-4 py-3 border border-gray-200 rounded-xl"
-        />
-      </div>
-      {loading ? (
-        <div className="text-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
-          <p className="text-sm text-gray-500 mt-2">Loading orders...</p>
-        </div>
-      ) : orders.length === 0 ? (
-        <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-          <p className="text-sm">No orders found.</p>
-        </div>
-      ) : (
-        <DataGrid
-          data={orders}
-          title="Orders"
-          onEdit={(item) => openModal('order-details', item)} // Updated to open modal
-          onDelete={() => {}} // No delete action for orders
-          pagination={orderPagination}
-          onPageChange={(page) => loadOrders({ page })}
-          columns={[
-            {
-              header: 'Order #',
-              key: 'orderNumber',
-              render: (item) => (
-                <div>
-                  <p className="font-bold text-gray-900">{item.orderNumber || `#${item._id?.slice(-6)}`}</p>
-                  <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                    <Calendar className="w-3 h-3" />
-                    {formatDate(item.createdAt)}
-                  </p>
-                </div>
-              ),
-            },
-            {
-              header: 'Customer',
-              key: 'userId',
-              render: (item) => (
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Users className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">{item.userId?.fullName || item.customerName || 'Unknown'}</p>
-                    <p className="text-xs text-gray-500">{item.deliveryType || 'Pickup'}</p>
-                  </div>
-                </div>
-              ),
-            },
-            {
-              header: 'Phone',
-              key: 'userId',
-              render: (item) => (
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <PhoneCallIcon className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    {item.userId?.phone || item.customerName ? (
-                      <a
-                        href={`tel:${item.userId?.phone || ''}`}
-                        className="font-semibold text-gray-900 hover:text-blue-600"
+  ),
+},
+                  {
+                    header: 'Price',
+                    key: 'price',
+                    render: (item) => formatCurrency(item.price),
+                  },
+                  {
+                    header: 'Stock',
+                    key: 'stockQuantity',
+                    render: (item) => (
+                      <span
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${item.stockQuantity > item.lowStockAlert
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-red-50 text-red-700 border-red-200'
+                          }`}
                       >
-                        {item.userId?.phone || item.customerName}
-                      </a>
-                    ) : (
-                      <p className="font-semibold text-gray-900">Unknown</p>
-                    )}
-                  </div>
-                </div>
-              ),
-            },
-            {
-              header: 'Items',
-              key: 'items',
-              render: (item) => (
-                <div className="max-w-xs">
-                  <p className="text-sm text-gray-900 font-medium">
-                    {item.items?.slice(0, 2).map((orderItem) => orderItem.foodItem?.name || 'Item').join(', ')}
-                    {item.items?.length > 2 && <span className="text-gray-500"> +{item.items.length - 2} more</span>}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">{item.items?.length || 0} items total</p>
-                </div>
-              ),
-            },
-            {
-              header: 'Total',
-              key: 'total',
-              render: (item) => (
-                <div>
-                  <p className="font-bold text-lg text-gray-900">{formatCurrency(item.total)}</p>
-                  {item.deliveryType === 'delivery' && (
-                    <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                      <MapPin className="w-3 h-3" />
-                      Delivery
-                    </p>
-                  )}
-                </div>
-              ),
-            },
-            {
-              header: 'Status',
-              key: 'status',
-              render: (item) => (
-                <select
-                  className={`text-xs font-semibold rounded-xl px-3 py-2 border-0 cursor-pointer transition-all hover:shadow-md ${getStatusColor(item.status)}`}
-                  value={item.status}
-                  onChange={(e) => handleOrderStatusUpdate(item._id, e.target.value)}
-                >
-                  <option value="pending">Pending</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="preparing">Preparing</option>
-                  <option value="ready">Ready</option>
-                  <option value="out-for-delivery">Out for Delivery</option>
-                  <option value="delivered">Delivered</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              ),
-            },
-          ]}
-          actions={[
-            {
-              icon: Eye,
-              label: 'View Details',
-              color: 'blue',
-              onClick: (item) => openModal('order-details', item), // Updated to open modal
-            },
-          ]}
-        />
-      )}
-    </div>
-  );
+                        {item.stockQuantity || 0}
+                      </span>
+                    ),
+                  },
+                  {
+                    header: 'Status',
+                    key: 'status',
+                    render: (item) => (
+                      <div className="flex flex-col gap-2">
+                        <span
+                          className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${item.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
+                            }`}
+                        >
+                          {item.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                        <div className="flex gap-1">
+                          {item.isFeatured && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-700 border border-yellow-200">
+                              <Star className="w-3 h-3 mr-1" />
+                              Featured
+                            </span>
+                          )}
+                          {item.isPopular && (
+                            <span className="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                              Popular
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ),
+                  },
+                ]}
+                actions={[
+                  {
+                    icon: Eye,
+                    label: 'View Details',
+                    color: 'blue',
+                    onClick: (item) => openModal('menu-item', item),
+                  },
+                  {
+                    icon: Trash2,
+                    label: 'Delete',
+                    color: 'red',
+                    onClick: (item) => handleDelete(item._id, 'food-item'),
+                  },
+                ]}
+              />
+            )}
+          </div>
+        );
+
+      case 'orders':
+        return (
+          <div>
+            {/* Search bar */}
+            <div className="mb-4">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search orders..."
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl"
+              />
+            </div>
+            {loading ? (
+              <div className="text-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
+                <p className="text-sm text-gray-500 mt-2">Loading orders...</p>
+              </div>
+            ) : orders.length === 0 ? (
+              <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                <p className="text-sm">No orders found.</p>
+              </div>
+            ) : (
+              <DataGrid
+                data={orders}
+                title="Orders"
+                onEdit={(item) => openModal('order-details', item)} // Updated to open modal
+                onDelete={() => { }} // No delete action for orders
+                pagination={orderPagination}
+                onPageChange={(page) => loadOrders({ page })}
+                columns={[
+                  {
+                    header: 'Order #',
+                    key: 'orderNumber',
+                    render: (item) => (
+                      <div>
+                        <p className="font-bold text-gray-900">{item.orderNumber || `#${item._id?.slice(-6)}`}</p>
+                        <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                          <Calendar className="w-3 h-3" />
+                          {formatDate(item.createdAt)}
+                        </p>
+                      </div>
+                    ),
+                  },
+                  {
+                    header: 'Customer',
+                    key: 'userId',
+                    render: (item) => (
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                          <Users className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{item.userId?.fullName || item.customerName || 'Unknown'}</p>
+                        </div>
+                      </div>
+                    ),
+                  },
+                  {
+                    header: 'Address',
+                    key: 'userId',
+                    render: (item) => (
+                      item.deliveryType === 'delivery' ? (
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                            <LocationEdit className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900">{item.deliveryAddress.address},<br></br>{item.deliveryAddress.apartment}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                            <LocationEdit className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900">{item.deliveryType}</p>
+                          </div>
+                        </div>
+                      )
+
+                    ),
+                  },
+
+                  {
+                    header: 'Phone',
+                    key: 'userId',
+                    render: (item) => (
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                          <PhoneCallIcon className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          {item.userId?.phone || item.customerName ? (
+                            <a
+                              href={`tel:${item.userId?.phone || ''}`}
+                              className="font-semibold text-gray-900 hover:text-blue-600"
+                            >
+                              {item.userId?.phone || item.customerName}
+                            </a>
+                          ) : (
+                            <p className="font-semibold text-gray-900">Unknown</p>
+                          )}
+                        </div>
+                      </div>
+                    ),
+                  },
+                  {
+                    header: 'Items',
+                    key: 'items',
+                    render: (item) => (
+                      <div className="max-w-xs">
+                        <p className="text-sm text-gray-900 font-medium">
+                          {item.items?.slice(0, 2).map((orderItem) => orderItem.foodItem?.name || 'Item').join(', ')}
+                          {item.specialInstructions}
+                          {item.items?.length > 2 && <span className="text-gray-500"> +{item.items.length - 2} more</span>}
+                        </p>
+
+                        <p className="text-xs text-gray-500 mt-1">{item.items?.length || 0} items total</p>
+                        {item.specialInstructions !== '' || item.specialInstructions !== null ? (
+                          <p className="text-xs text-gray-500">
+                            Special Instruction:{item.items?.slice(0, 2).map((orderItem) => orderItem.specialInstructions || 'Item').join(', ')}
+
+                          </p>
+                        ) : ''}
+
+                      </div>
+                    ),
+                  },
+                  {
+                    header: 'Total',
+                    key: 'total',
+                    render: (item) => (
+                      <div>
+                        <p className="font-bold text-lg text-gray-900">
+                          {formatCurrency(item.total)}
+                        </p>
+
+                        {item.deliveryType === 'delivery' && (
+                          <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                            <MapPin className="w-3 h-3" />
+                            Delivery fee included ({formatCurrency(item.deliveryFee)})
+                          </p>
+                        )}
+                      </div>
+
+                    ),
+                  },
+
+
+
+                  {
+                    header: 'Status',
+                    key: 'status',
+                    render: (item) => (
+                      <select
+                        className={`text-xs font-semibold rounded-xl px-3 py-2 border-0 cursor-pointer transition-all hover:shadow-md ${getStatusColor(item.status)}`}
+                        value={item.status}
+                        onChange={(e) => handleOrderStatusUpdate(item._id, e.target.value)}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="preparing">Preparing</option>
+                        <option value="ready">Ready</option>
+                        <option value="out-for-delivery">Out for Delivery</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    ),
+                  },
+                ]}
+                actions={[
+                  {
+                    icon: Eye,
+                    label: 'View Details',
+                    color: 'blue',
+                    onClick: (item) => openModal('order-details', item), // Updated to open modal
+                  },
+                ]}
+              />
+            )}
+          </div>
+        );
       case 'settings':
         return (
           <SettingsForm />
@@ -3037,7 +3016,7 @@ const OrderDetails = ({ order }) => {
       category: { title: `${editingItem ? 'Edit' : 'Add'} Category`, component: <CategoryForm />, size: 'max-w-4xl' },
       'menu-item': { title: `${editingItem ? 'Edit' : 'Add'} Menu Item`, component: <FoodItemForm />, size: 'max-w-6xl' },
       banner: { title: `${editingItem ? 'Edit' : 'Add'} Banner Item`, component: <BannerForm />, size: 'max-w-6xl' },
-          'order-details': { title: 'Order Details', component: <OrderDetails order={editingItem} />, size: 'max-w-5xl' },
+      'order-details': { title: 'Order Details', component: <OrderDetails order={editingItem} />, size: 'max-w-5xl' },
 
     };
     const config = modalConfigs[modalType];
@@ -3069,17 +3048,17 @@ const OrderDetails = ({ order }) => {
   useEffect(() => {
     if (notification) {
       console.log('New notification received:', notification);
-      
+
       // Handle different notification types
       if (notification.data?.type === 'new_order') {
         // Reload orders if on orders tab
         if (activeTab === 'orders') {
           loadOrders();
         }
-        
+
         // Update dashboard stats
         loadDashboardData();
-        
+
         // Show toast notification (you can add a toast library)
         showNotificationDialog(
           'New Order!',
@@ -3095,7 +3074,7 @@ const OrderDetails = ({ order }) => {
     if (notif.data?.type === 'new_order' && notif.data?.orderId) {
       // Navigate to orders tab
       setActiveTab('orders');
-      
+
       // Optionally, open the order details modal
       setTimeout(() => {
         const order = orders.find(o => o._id === notif.data.orderId);
@@ -3104,12 +3083,12 @@ const OrderDetails = ({ order }) => {
         }
       }, 500);
     }
-    
+
     clearNotification();
   };
 
   // Notification permission banner
-const NotificationPermissionBanner = () => {
+  const NotificationPermissionBanner = () => {
     if (permissionStatus === 'granted' || permissionStatus === 'denied') {
       return null;
     }
@@ -3137,123 +3116,142 @@ const NotificationPermissionBanner = () => {
     );
   };
 
+ const handleLanguageChange = (lang) => {
+  setSelectedLanguage(lang);
+  apiService.setLanguage(lang);
+  loadData(); // Reload all data
+  loadCategories(); // Explicitly reload categories
+  loadFoodItems(); // Explicitly reload food items
+};
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
-      <ConfirmDialog
-        isOpen={confirmDialog.isOpen}
-        onClose={() => setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null })}
-        onConfirm={confirmDialog.onConfirm}
-        title={confirmDialog.title}
-        message={confirmDialog.message}
-        confirmText={confirmDialog.confirmText}
-      />
-      <NotificationDialog
-        isOpen={notificationDialog.isOpen}
-        onClose={() => setNotificationDialog({ isOpen: false, title: '', message: '', type: 'success' })}
-        title={notificationDialog.title}
-        message={notificationDialog.message}
-        type={notificationDialog.type}
-      />
-   <header className="bg-white shadow-xl border-b border-gray-100 sticky top-0 z-40 backdrop-blur-md bg-opacity-90">
-        <div className="flex items-center justify-between px-8 py-6">
-          <div className="flex items-center gap-6">
-            <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 p-3 rounded-2xl shadow-lg">
-              <Package className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Restaurant Admin</h1>
-              <p className="text-sm text-gray-600 font-medium">Manage your restaurant efficiently</p>
-            </div>
+  const languages = [
+    { code: 'en', label: 'English' },
+    { code: 'es', label: 'Español' },
+    { code: 'ca', label: 'Català' },
+    { code: 'ar', label: 'العربية' },
+  ];
+ return (
+  <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
+    <header className="bg-white shadow-xl border-b border-gray-100 sticky top-0 z-40 backdrop-blur-md bg-opacity-90">
+      <div className="flex items-center justify-between px-8 py-6">
+        <div className="flex items-center gap-6">
+          <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 p-3 rounded-2xl shadow-lg">
+            <Package className="w-8 h-8 text-white" />
           </div>
-          <div className="flex items-center gap-6">
-            {/* Replace the existing bell button with NotificationBell component */}
-          <NotificationBell
-  notification={notification}
-  onClear={clearNotification}
-  onNotificationClick={handleNotificationClick}
-  fcmToken={fcmToken}
-  permissionStatus={permissionStatus}
-  requestPermission={requestPermission}
-/>
-            
-            <div className="flex items-center gap-4 bg-gray-50 rounded-2xl px-4 py-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-                <span className="text-sm font-bold text-white">AD</span>
-              </div>
-              <div>
-                <span className="text-sm font-bold text-gray-900">Admin User</span>
-                <p className="text-xs text-gray-500">Restaurant Owner</p>
-              </div>
-              <ChevronDown className="w-4 h-4 text-gray-400" />
-            </div>
-            <button className="p-3 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-2xl transition-all duration-200">
-              <LogOut className="w-6 h-6" />
-            </button>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Restaurant Admin</h1>
+            <p className="text-sm text-gray-600 font-medium">Manage your restaurant efficiently</p>
           </div>
         </div>
-      </header>
+        <div className="flex items-center gap-6">
+          <select
+            value={selectedLanguage}
+            onChange={(e) => handleLanguageChange(e.target.value)}
+            className="px-4 py-2 bg-gray-100 rounded-xl text-sm font-medium text-gray-700 focus:ring-2 focus:ring-blue-500"
+          >
+            {languages.map((lang) => (
+              <option key={lang.code} value={lang.code}>
+                {lang.label}
+              </option>
+            ))}
+          </select>
+          <NotificationBell
+            notification={notification}
+            onClear={clearNotification}
+            onNotificationClick={handleNotificationClick}
+            fcmToken={fcmToken}
+            permissionStatus={permissionStatus}
+            requestPermission={requestPermission}
+          />
+          <div className="flex items-center gap-4 bg-gray-50 rounded-2xl px-4 py-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+              <span className="text-sm font-bold text-white">AD</span>
+            </div>
+            <div>
+              <span className="text-sm font-bold text-gray-900">Admin User</span>
+              <p className="text-xs text-gray-500">Restaurant Owner</p>
+            </div>
+            <ChevronDown className="w-4 h-4 text-gray-400" />
+          </div>
+          <button className="p-3 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-2xl transition-all duration-200">
+            <LogOut className="w-6 h-6" />
+          </button>
+        </div>
+      </div>
+    </header>
 
-      <div className="flex">
-        <nav className="w-80 bg-white shadow-xl h-[calc(100vh-97px)] sticky top-[97px] border-r border-gray-100 backdrop-blur-md bg-opacity-90">
-          <div className="p-8">
-            <div className="space-y-3">
-              {navigationItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    if (item.id === "offers") {
-                      router.push("/offer"); // Navigate to /offers page
-                    }
-                    else if (item.id === "contact") {
-                      router.push("/contact"); // Navigate to /offers page
-                    } 
-                    
-                    else {
-                      setActiveTab(item.id);
-                    }
-                  }}
-                  className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-left transition-all duration-300 font-semibold ${activeTab === item.id
-                      ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg transform scale-[1.02]`
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:scale-[1.01]"
-                    }`}
+    <div className="flex">
+      <nav className="w-80 bg-white shadow-xl h-[calc(100vh-97px)] sticky top-[97px] border-r border-gray-100 backdrop-blur-md bg-opacity-90">
+        <div className="p-8">
+          <div className="space-y-3">
+            {navigationItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  if (item.id === "offers") {
+                    router.push("/offer");
+                  } else if (item.id === "contact") {
+                    router.push("/contact");
+                  } else {
+                    setActiveTab(item.id);
+                  }
+                }}
+                className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-left transition-all duration-300 font-semibold ${
+                  activeTab === item.id
+                    ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg transform scale-[1.02]`
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:scale-[1.01]"
+                }`}
+              >
+                <div
+                  className={`p-2 rounded-xl ${
+                    activeTab === item.id ? "bg-gray-900 bg-opacity-20" : "bg-gray-100"
+                  }`}
                 >
-                  <div
-                    className={`p-2 rounded-xl ${activeTab === item.id ? "bg-gray-900 bg-opacity-20" : "bg-gray-100"
-                      }`}
-                  >
-                    <item.icon className="w-5 h-5" />
-                  </div>
-                  <span>{item.name}</span>
-                </button>
-              ))}
-              
+                  <item.icon className="w-5 h-5" />
+                </div>
+                <span>{item.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </nav>
+      <main className="flex-1 p-8 overflow-auto">
+        <NotificationPermissionBanner />
+        {loading ? (
+          <div className="flex items-center justify-center h-96">
+            <div className="text-center">
+              <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+              <p className="text-gray-600 font-medium">Loading your data...</p>
             </div>
           </div>
-        </nav>
-        <main className="flex-1 p-8 overflow-auto">
-                    <NotificationPermissionBanner />
-
-          {loading ? (
-            <div className="flex items-center justify-center h-96">
-              <div className="text-center">
-                <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-                <p className="text-gray-600 font-medium">Loading your data...</p>
-              </div>
-            </div>
-          ) : (
-            renderContent()
-          )}
-        </main>
-      </div>
-
-      {modalContent && (
-        <Modal title={modalContent.title} size={modalContent.size}>
-          {modalContent.component}
-        </Modal>
-      )}
+        ) : (
+          renderContent()
+        )}
+      </main>
     </div>
-  );
+
+    {modalContent && (
+      <Modal title={modalContent.title} size={modalContent.size}>
+        {modalContent.component}
+      </Modal>
+    )}
+    <ConfirmDialog
+      isOpen={confirmDialog.isOpen}
+      onClose={() => setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null })}
+      onConfirm={confirmDialog.onConfirm}
+      title={confirmDialog.title}
+      message={confirmDialog.message}
+      confirmText={confirmDialog.confirmText}
+    />
+    <NotificationDialog
+      isOpen={notificationDialog.isOpen}
+      onClose={() => setNotificationDialog({ isOpen: false, title: '', message: '', type: 'success' })}
+      title={notificationDialog.title}
+      message={notificationDialog.message}
+      type={notificationDialog.type}
+    />
+  </div>
+);
 };
 
 
