@@ -831,8 +831,14 @@ const RestaurantAdminDashboard = () => {
   };
 const getLocalizedFoodItem = (item, lang) => ({
   ...item,
-  name: item.name || 'Unnamed', // Ensure name is a string
-  description: item.description || 'No description', // Ensure description is a string
+  name:
+    typeof item.name === 'object' && item.name
+      ? item.name[lang] || item.name.en || Object.values(item.name)[0] || 'Unnamed'
+      : item.name || 'Unnamed',
+  description:
+    typeof item.description === 'object' && item.description
+      ? item.description[lang] || item.description.en || Object.values(item.description)[0] || 'No description'
+      : item.description || 'No description',
   category: item.category
     ? {
         ...item.category,
@@ -854,8 +860,11 @@ const loadFoodItems = async (params = {}) => {
       lang: apiService.language,
     };
     const response = await apiService.getFoodItems(queryParams);
-    console.log('Food Items Response:', response);
-    setFoodItems(response.items.map(item => getLocalizedFoodItem(item, apiService.language)) || []);
+    console.log('Raw Food Items Response:', response);
+    console.log('Sample Item Structure:', response.items[0]); // Log first item
+    const localizedItems = response.items.map(item => getLocalizedFoodItem(item, apiService.language)) || [];
+    console.log('Localized Food Items:', localizedItems[0]); // Log first localized item
+    setFoodItems(localizedItems);
     setFoodItemsPagination({
       currentPage: response.currentPage || 1,
       totalPages: response.totalPages || Math.ceil(response.totalItems / (queryParams.limit || 10)),
@@ -2739,22 +2748,22 @@ const loadFoodItems = async (params = {}) => {
  />
  ),
  },
- {
- header: 'Name',
- key: 'name',
- render: (item) => (
- <div>
- <p className="font-semibold text-gray-900">{item.name || 'Unnamed'}</p>
- <p className ="text-xs text-gray-500">
- {item.category
- ? typeof item.category.name === 'string'
- ? item.category.name
- : 'No category'
- : 'No category'}
- </p>
- </div>
- ),
- },
+{
+  header: 'Name',
+  key: 'name',
+  render: (item) => (
+    <div>
+      <p className="font-semibold text-gray-900">
+        {typeof item.name === 'string' ? item.name : 'Unnamed'}
+      </p>
+      <p className="text-xs text-gray-500">
+        {item.category && typeof item.category.name === 'string'
+          ? item.category.name
+          : 'No category'}
+      </p>
+    </div>
+  ),
+},
  {
  header: 'Price',
  key: 'price',
