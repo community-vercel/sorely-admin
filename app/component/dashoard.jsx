@@ -2686,135 +2686,142 @@ const loadFoodItems = async (params = {}) => {
             ]}
           />
         );
-      case 'menu-items':
-        return (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Menu Items</h2>
-              <button
-                onClick={() => openModal('menu-item')}
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium flex items-center gap-2"
-              >
-                <Plus className="w-5 h-5" />
-                Add Item
-              </button>
-            </div>
-            <div className="mb-4">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search menu items..."
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl"
-              />
-            </div>
-            {loading ? (
-              <div className="text-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
-                <p className="text-sm text-gray-500 mt-2">Loading menu items...</p>
-              </div>
-            ) : foodItems.length === 0 ? (
-              <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-                <p className="text-sm">No menu items found.</p>
-              </div>
-            ) : (
-              <DataGrid
-                data={foodItems}
-                title="Menu Items"
-                onEdit={(item) => openModal('menu-item', item)}
-                onDelete={(item) => handleDelete(item._id, 'food-item')}
-                pagination={foodItemsPagination}
-                onPageChange={(page) => loadFoodItems({ page })}
-                columns={[
-                  {
-                    header: 'Image',
-                    key: 'imageUrl',
-                    render: (item) => (
-                      <img
-                        src={item.imageUrl}
-                        alt={item.name[apiService.language] || item.name.en}
-                        className="w-16 h-16 object-cover rounded-xl"
-                      />
-                    ),
-                  },
-{
-  header: 'Name',
-  key: 'name',
-  render: (item) => (
-    <div>
-      <p className="font-semibold text-gray-900">{item.name || 'Unnamed'}</p>
-      <p className="text-xs text-gray-500">
-        {item.category ? (item.category.name || 'No category') : 'No category'}
-      </p>
-    </div>
-  ),
-},
-                  {
-                    header: 'Price',
-                    key: 'price',
-                    render: (item) => formatCurrency(item.price),
-                  },
-                  {
-                    header: 'Stock',
-                    key: 'stockQuantity',
-                    render: (item) => (
-                      <span
-                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${item.stockQuantity > item.lowStockAlert
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-red-50 text-red-700 border-red-200'
-                          }`}
-                      >
-                        {item.stockQuantity || 0}
-                      </span>
-                    ),
-                  },
-                  {
-                    header: 'Status',
-                    key: 'status',
-                    render: (item) => (
-                      <div className="flex flex-col gap-2">
-                        <span
-                          className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${item.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
-                            }`}
-                        >
-                          {item.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                        <div className="flex gap-1">
-                          {item.isFeatured && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-700 border border-yellow-200">
-                              <Star className="w-3 h-3 mr-1" />
-                              Featured
-                            </span>
-                          )}
-                          {item.isPopular && (
-                            <span className="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
-                              Popular
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ),
-                  },
-                ]}
-                actions={[
-                  {
-                    icon: Eye,
-                    label: 'View Details',
-                    color: 'blue',
-                    onClick: (item) => openModal('menu-item', item),
-                  },
-                  {
-                    icon: Trash2,
-                    label: 'Delete',
-                    color: 'red',
-                    onClick: (item) => handleDelete(item._id, 'food-item'),
-                  },
-                ]}
-              />
-            )}
-          </div>
-        );
-
+     case 'menu-items':
+ return (
+ <div>
+ <div className="flex justify-between items-center mb-6">
+ <h2 className="text-2xl font-bold text-gray-900">Menu Items</h2>
+ <button
+ onClick={() => openModal('menu-item')}
+ className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium flex items-center gap-2"
+ >
+ <Plus className="w-5 h-5" />
+ Add Item
+ </button>
+ </div>
+ <div className="mb-4">
+ <input
+ type="text"
+ value={searchTerm}
+ onChange={(e) => setSearchTerm(e.target.value)}
+ placeholder="Search menu items..."
+ className="w-full px-4 py-3 border border-gray-200 rounded-xl"
+ />
+ </div>
+ {loading ? (
+ <div className="text-center py-12">
+ <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
+ <p className="text-sm text-gray-500 mt-2">Loading menu items...</p>
+ </div>
+ ) : foodItems.length === 0 ? (
+ <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+ <p className="text-sm">No menu items found.</p>
+ </div>
+ ) : (
+ <DataGrid
+ data={foodItems}
+ title="Menu Items"
+ onEdit={(item) => openModal('menu-item', item)}
+ onDelete={(item) => handleDelete(item._id, 'food-item')}
+ pagination={foodItemsPagination}
+ onPageChange={(page) => loadFoodItems({ page })}
+ columns={[
+ {
+ header: 'Image',
+ key: 'imageUrl',
+ render: (item) => (
+ <img
+ src={item.imageUrl}
+ alt={item.name || 'Unnamed'}
+ className="w-16 h-16 object-cover rounded-xl"
+ />
+ ),
+ },
+ {
+ header: 'Name',
+ key: 'name',
+ render: (item) => (
+ <div>
+ <p className="font-semibold text-gray-900">{item.name || 'Unnamed'}</p>
+ <p className ="text-xs text-gray-500">
+ {item.category
+ ? typeof item.category.name === 'string'
+ ? item.category.name
+ : 'No category'
+ : 'No category'}
+ </p>
+ </div>
+ ),
+ },
+ {
+ header: 'Price',
+ key: 'price',
+ render: (item) => formatCurrency(item.price),
+ },
+ {
+ header: 'Stock',
+ key: 'stockQuantity',
+ render: (item) => (
+ <span
+ className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${
+ item.stockQuantity > item.lowStockAlert
+ ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+ : 'bg-red-50 text-red-700 border-red-200'
+ }`}
+ >
+ {item.stockQuantity || 0}
+ </span>
+ ),
+ },
+ {
+ header: 'Status',
+ key: 'status',
+ render: (item) => (
+ <div className="flex flex-col gap-2">
+ <span
+ className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${
+ item.isActive
+ ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+ : 'bg-red-50 text-red-700 border-red-200'
+ }`}
+ >
+ {item.isActive ? 'Active' : 'Inactive'}
+ </span>
+ <div className="flex gap-1">
+ {item.isFeatured && (
+ <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-700 border border-yellow-200">
+ <Star className="w-3 h-3 mr-1" />
+ Featured
+ </span>
+ )}
+ {item.isPopular && (
+ <span className="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+ Popular
+ </span>
+ )}
+ </div>
+ </div>
+ ),
+ },
+ ]}
+ actions={[
+ {
+ icon: Eye,
+ label: 'View Details',
+ color: 'blue',
+ onClick: (item) => openModal('menu-item', item),
+ },
+ {
+ icon: Trash2,
+ label: 'Delete',
+ color: 'red',
+ onClick: (item) => handleDelete(item._id, 'food-item'),
+ },
+ ]}
+ />
+ )}
+ </div>
+ );
       case 'orders':
         return (
           <div>
