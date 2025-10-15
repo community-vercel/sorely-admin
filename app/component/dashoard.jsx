@@ -1558,6 +1558,84 @@ const loadFoodItems = async (params = {}) => {
             </div>
           </div>
         </div>
+<div className="bg-gradient-to-br from-purple-50 to-white p-6 rounded-2xl border border-purple-200">
+          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+            Food Properties & Status
+          </h4>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
+            {[
+              { key: 'isVeg', label: 'Vegetarian', desc: 'Contains no meat' },
+              { key: 'isVegan', label: 'Vegan', desc: 'Plant-based only' },
+              { key: 'isGlutenFree', label: 'Gluten Free', desc: 'No gluten ingredients' },
+              { key: 'isNutFree', label: 'Nut Free', desc: 'Safe from nuts' },
+              { key: 'isFeatured', label: 'Featured Item', desc: 'Show on homepage' },
+              { key: 'isPopular', label: 'Popular', desc: 'Mark as popular choice' },
+              { key: 'isActive', label: 'Active', desc: 'Available for ordering' },
+              { key: 'isAvailable', label: 'Available', desc: 'Currently in stock' },
+            ].map(({ key, label, desc }) => (
+              <div key={key} className="bg-white p-4 rounded-xl border border-gray-200">
+                <div className="flex items-center gap-3 mb-2">
+                  <input
+                    type="checkbox"
+                    id={key}
+                    checked={formData[key]}
+                    onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })}
+                    className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  />
+                  <label htmlFor={key} className="text-sm font-semibold text-gray-800">
+                    {label}
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500 ml-8">{desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-3">Spice Level</label>
+            <select
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
+              value={formData.spiceLevel}
+              onChange={(e) => setFormData({ ...formData, spiceLevel: e.target.value })}
+            >
+              <option value="none">None</option>
+              <option value="mild">Mild 🌶️</option>
+              <option value="medium">Medium 🌶️🌶️</option>
+              <option value="hot">Hot 🌶️🌶️🌶️</option>
+              <option value="very-hot">Very Hot 🌶️🌶️🌶️🌶️</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Availability Schedule */}
+        <div className="bg-gradient-to-br from-cyan-50 to-white p-6 rounded-2xl border border-cyan-200">
+          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <div className="w-2 h-2 bg-cyan-500 rounded-full"></div>
+            Availability Schedule
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-3">Available From</label>
+              <input
+                type="datetime-local"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all bg-white"
+                value={formData.availableFrom}
+                onChange={(e) => setFormData({ ...formData, availableFrom: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-3">Available Until</label>
+              <input
+                type="datetime-local"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all bg-white"
+                value={formData.availableUntil}
+                onChange={(e) => setFormData({ ...formData, availableUntil: e.target.value })}
+              />
+            </div>
+          </div>
+        </div>
 
 
         {/* Product Details */}
@@ -1585,7 +1663,96 @@ const loadFoodItems = async (params = {}) => {
             title="Addons"
           />
         </div>
+<div className="bg-gradient-to-br from-yellow-50 to-white p-6 rounded-2xl border border-yellow-200">
+          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+            Ingredients
+          </h4>
+          <div className="space-y-3">
+            {formData.ingredients.map((ingredient, index) => (
+              <div key={index} className="flex items-center gap-3 bg-white p-4 rounded-xl border border-gray-200">
+                <input
+                  type="text"
+                  className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-all bg-white"
+                  value={ingredient.name || ''}
+                  onChange={(e) => {
+                    const newIngredients = [...formData.ingredients];
+                    newIngredients[index] = { ...ingredient, name: e.target.value };
+                    setFormData({ ...formData, ingredients: newIngredients });
+                  }}
+                  placeholder="Ingredient name"
+                />
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={ingredient.optional || false}
+                    onChange={(e) => {
+                      const newIngredients = [...formData.ingredients];
+                      newIngredients[index] = { ...ingredient, optional: e.target.checked };
+                      setFormData({ ...formData, ingredients: newIngredients });
+                    }}
+                    className="w-4 h-4 rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
+                  />
+                  <span className="font-medium text-gray-700">Optional</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newIngredients = formData.ingredients.filter((_, i) => i !== index);
+                    setFormData({ ...formData, ingredients: newIngredients });
+                  }}
+                  className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-all duration-200"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setFormData({
+                ...formData,
+                ingredients: [...formData.ingredients, { name: '', optional: false }]
+              })}
+              className="text-yellow-700 hover:text-yellow-900 text-sm flex items-center gap-2 transition-colors bg-white p-3 rounded-xl border-2 border-dashed border-yellow-200 hover:border-yellow-300 w-full justify-center"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Ingredient</span>
+            </button>
+          </div>
+        </div>
 
+        {/* Allergens */}
+        <div className="bg-gradient-to-br from-red-50 to-white p-6 rounded-2xl border border-red-200">
+          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+            Allergens
+          </h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {['nuts', 'dairy', 'eggs', 'soy', 'wheat', 'fish', 'shellfish', 'sesame'].map((allergen) => (
+              <label key={allergen} className="flex items-center gap-3 text-sm bg-white p-4 rounded-xl border border-gray-200 hover:border-red-200 transition-colors cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.allergens.includes(allergen)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setFormData({
+                        ...formData,
+                        allergens: [...formData.allergens, allergen]
+                      });
+                    } else {
+                      setFormData({
+                        ...formData,
+                        allergens: formData.allergens.filter(a => a !== allergen)
+                      });
+                    }
+                  }}
+                  className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                />
+                <span className="capitalize font-medium text-gray-700">{allergen}</span>
+              </label>
+            ))}
+          </div>
+        </div>
         {/* SEO Data */}
         <div className="bg-gradient-to-br from-purple-50 to-white p-6 rounded-2xl border border-purple-200">
           <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
