@@ -831,16 +831,18 @@ const RestaurantAdminDashboard = () => {
   };
 const getLocalizedFoodItem = (item, lang) => ({
   ...item,
-  name: item.name || 'Unnamed', // Name is a string, no localization needed
-  description: item.description || 'No description', // Description is a string
+  name: item.name || 'Unnamed', // Ensure name is a string
+  description: item.description || 'No description', // Ensure description is a string
   category: item.category
     ? {
         ...item.category,
-        name: item.category.name[lang] || item.category.name.en || 'No category',
+        name:
+          typeof item.category.name === 'object' && item.category.name
+            ? item.category.name[lang] || item.category.name.en || Object.values(item.category.name)[0] || 'No category'
+            : item.category.name || 'No category',
       }
     : null,
 });
-
 const loadFoodItems = async (params = {}) => {
   setLoading(true);
   try {
