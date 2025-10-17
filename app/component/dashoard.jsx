@@ -387,66 +387,50 @@ const NotificationDialog = ({ isOpen, onClose, title, message, type = "success" 
 };
 
 // Enhanced Image Upload Component
-const ImageUpload = ({ value, onChange, className = "", multiple = false }) => {
+const ImageUpload = ({ value, onChange, className = "", multiple = false, id }) => {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(multiple ? (value || []) : (value || ''));
   const [apiService] = useState(new ApiService());
-  const setAdminLanguage = (lang) => {
-    apiService.setLanguage(lang);
-    loadData(); // Reload data to reflect the new language
-  };
+
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-
-    const invalidFiles = files.filter(file => !file.type.startsWith('image/'));
-    if (invalidFiles.length > 0) {
+    if (!files.length) {
+      console.log(`No files selected for input ID: ${id}`);
       return;
     }
 
-    const oversizedFiles = files.filter(file => file.size > 5 * 1024 * 1024);
-    if (oversizedFiles.length > 0) {
+    if (files.some(file => !file.type.startsWith('image/'))) {
+      console.error(`Invalid file type for input ID: ${id}`);
+      return;
+    }
+    if (files.some(file => file.size > 5 * 1024 * 1024)) {
+      console.error(`File too large for input ID: ${id}`);
       return;
     }
 
     setUploading(true);
-
     try {
-      if (multiple) {
-        const uploadPromises = files.map(async (file) => {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            setPreview(prev => [...prev, e.target.result]);
-          };
-          reader.readAsDataURL(file);
+      const file = files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        console.log(`Preview updated for input ID: ${id}, URL: ${e.target.result}`);
+        setPreview(multiple ? [...(Array.isArray(preview) ? preview : []), e.target.result] : e.target.result);
+      };
+      reader.readAsDataURL(file);
 
-          return await apiService.uploadToVercelBlob(file);
-        });
-
-        const uploadedUrls = await Promise.all(uploadPromises);
-        const newUrls = [...(value || []), ...uploadedUrls];
-        onChange(newUrls);
-        setPreview(newUrls);
-      } else {
-        const file = files[0];
-
-        const reader = new FileReader();
-        reader.onload = (e) => setPreview(e.target.result);
-        reader.readAsDataURL(file);
-
-        const imageUrl = await apiService.uploadToVercelBlob(file);
-        onChange(imageUrl);
-        setPreview(imageUrl);
-      }
+      const imageUrl = await apiService.uploadToVercelBlob(file);
+      console.log(`Image uploaded for input ID: ${id}, URL: ${imageUrl}`);
+      onChange(multiple ? [...(Array.isArray(value) ? value : []), imageUrl] : imageUrl);
     } catch (error) {
-      console.error('Upload failed:', error);
-      setPreview(multiple ? (value || []) : (value || ''));
+      console.error(`Upload failed for input ID: ${id}:`, error);
+      setPreview(value || (multiple ? [] : ''));
     } finally {
       setUploading(false);
     }
   };
 
   const removeImage = (indexOrUrl) => {
+    console.log(`Removing image for input ID: ${id}, index/URL: ${indexOrUrl}`);
     if (multiple) {
       const newImages = Array.isArray(value) ? value.filter((_, i) => i !== indexOrUrl) : [];
       onChange(newImages);
@@ -467,13 +451,12 @@ const ImageUpload = ({ value, onChange, className = "", multiple = false }) => {
             multiple={multiple}
             onChange={handleFileChange}
             className="hidden"
-            id="image-upload"
+            id={id} // Use unique ID
             disabled={uploading}
           />
           <label
-            htmlFor="image-upload"
-            className={`inline-flex items-center px-6 py-3 bg-white border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50 transition-all duration-200 ${uploading ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+            htmlFor={id}
+            className={`inline-flex items-center px-6 py-3 bg-white border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50 transition-all duration-200 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {uploading ? (
               <Loader2 className="w-5 h-5 mr-3 animate-spin text-blue-600" />
@@ -485,13 +468,13 @@ const ImageUpload = ({ value, onChange, className = "", multiple = false }) => {
             </span>
           </label>
         </div>
-
         {!multiple && (
           <div className="flex-1">
             <input
               type="url"
               value={value || ''}
               onChange={(e) => {
+                console.log(`URL input changed for ID: ${id}, new value: ${e.target.value}`);
                 onChange(e.target.value);
                 setPreview(e.target.value);
               }}
@@ -502,7 +485,6 @@ const ImageUpload = ({ value, onChange, className = "", multiple = false }) => {
           </div>
         )}
       </div>
-
       {preview && (
         <div className="space-y-3">
           {multiple ? (
@@ -579,16 +561,19 @@ const Pagination = ({ pagination, onPageChange }) => {
 const FormArrayField = ({ items, onChange, fieldConfig, title }) => {
   const addItem = () => {
     const newItem = fieldConfig.defaultItem();
+    console.log(`Adding new ${title.slice(0, -1)}:`, newItem);
     onChange([...items, newItem]);
   };
 
   const updateItem = (index, updatedItem) => {
+    console.log(`Updating ${title.slice(0, -1)} at index ${index}:`, updatedItem);
     const newItems = [...items];
     newItems[index] = updatedItem;
     onChange(newItems);
   };
 
   const removeItem = (index) => {
+    console.log(`Removing ${title.slice(0, -1)} at index ${index}`);
     onChange(items.filter((_, i) => i !== index));
   };
 
@@ -605,7 +590,6 @@ const FormArrayField = ({ items, onChange, fieldConfig, title }) => {
           <span>Add {title.slice(0, -1)}</span>
         </button>
       </div>
-
       {items.map((item, index) => (
         <div key={index} className="border border-gray-200 rounded-xl p-5 bg-gradient-to-br from-gray-50 to-white">
           <div className="flex justify-end mb-3">
@@ -640,12 +624,17 @@ const FormArrayField = ({ items, onChange, fieldConfig, title }) => {
                     value={item[field.key] || 0}
                     onChange={(e) => updateItem(index, { ...item, [field.key]: parseFloat(e.target.value) || 0 })}
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    placeholder={field.placeholder}
                   />
                 )}
                 {field.type === 'image' && (
                   <ImageUpload
                     value={item[field.key] || ''}
-                    onChange={(url) => updateItem(index, { ...item, [field.key]: url })}
+                    onChange={(url) => {
+                      console.log(`Updating addon[${index}].${field.key} with URL: ${url}`);
+                      updateItem(index, { ...item, [field.key]: url });
+                    }}
+                    id={`addon-image-upload-${index}`}
                   />
                 )}
               </div>
@@ -653,7 +642,6 @@ const FormArrayField = ({ items, onChange, fieldConfig, title }) => {
           </div>
         </div>
       ))}
-
       {items.length === 0 && (
         <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
           <div className="text-4xl mb-2">📦</div>
@@ -817,65 +805,95 @@ const RestaurantAdminDashboard = () => {
       : 'No description',
   });
 
-  const loadCategories = async () => {
+ const loadCategories = async () => {
     try {
-      const response = await apiService.getCategories();
-      console.log('Raw categories response:', response);
-      const transformedCategories = response.categories.map(cat => getLocalized(cat, apiService.language)) || [];
-      console.log('Transformed categories:', transformedCategories);
-      setCategories(transformedCategories);
+        const response = await apiService.getCategories();
+        console.log('Raw categories response:', response);
+
+        // Store raw categories with _multilingual data
+        const categories = Array.isArray(response.categories) ? response.categories : [];
+        setCategories(categories);
     } catch (error) {
-      console.error('Error loading categories:', error);
-      showNotificationDialog('Error', 'Error loading categories: ' + error.message, 'error');
+        console.error('Error loading categories:', error);
+        showNotificationDialog('Error', 'Error loading categories: ' + error.message, 'error');
     }
-  };
-const getLocalizedFoodItem = (item, lang) => ({
-  ...item,
-  name:
-    typeof item.name === 'object' && item.name
-      ? item.name[lang] || item.name.en || Object.values(item.name)[0] || 'Unnamed'
-      : item.name || 'Unnamed',
-  description:
-    typeof item.description === 'object' && item.description
-      ? item.description[lang] || item.description.en || Object.values(item.description)[0] || 'No description'
-      : item.description || 'No description',
-  category: item.category
-    ? {
+};
+  const getLocalizedFoodItem = (item, lang) => ({
+    ...item,
+    name:
+      typeof item.name === 'object' && item.name
+        ? item.name[lang] || item.name.en || Object.values(item.name)[0] || 'Unnamed'
+        : item.name || 'Unnamed',
+    description:
+      typeof item.description === 'object' && item.description
+        ? item.description[lang] || item.description.en || Object.values(item.description)[0] || 'No description'
+        : item.description || 'No description',
+    category: item.category
+      ? {
         ...item.category,
         name:
           typeof item.category.name === 'object' && item.category.name
             ? item.category.name[lang] || item.category.name.en || Object.values(item.category.name)[0] || 'No category'
             : item.category.name || 'No category',
       }
-    : null,
-});
+      : null,
+  });
 const loadFoodItems = async (params = {}) => {
-  setLoading(true);
-  try {
-    const queryParams = {
-      page: params.page || foodItemsPagination.currentPage,
-      limit: params.limit || 10,
-      search: params.search || searchTerm,
-      includeInactive: true,
-      lang: apiService.language,
-    };
-    const response = await apiService.getFoodItems(queryParams);
-    console.log('Raw Food Items Response:', response);
-    console.log('Sample Item Structure:', response.items[0]); // Log first item
-    const localizedItems = response.items.map(item => getLocalizedFoodItem(item, apiService.language)) || [];
-    console.log('Localized Food Items:', localizedItems[0]); // Log first localized item
-    setFoodItems(localizedItems);
-    setFoodItemsPagination({
-      currentPage: response.currentPage || 1,
-      totalPages: response.totalPages || Math.ceil(response.totalItems / (queryParams.limit || 10)),
-      totalItems: response.totalItems || response.count,
-    });
-  } catch (error) {
-    console.error('Error loading food items:', error);
-    showNotificationDialog('Error', 'Error loading menu items: ' + error.message, 'error');
-  } finally {
-    setLoading(false);
-  }
+    setLoading(true);
+    try {
+        const queryParams = {
+            page: params.page || foodItemsPagination.currentPage,
+            limit: params.limit || 10,
+            search: params.search || searchTerm,
+            includeInactive: true,
+            lang: apiService.language,
+        };
+        const response = await apiService.getFoodItems(queryParams);
+        console.log('Raw Food Items Response:', response);
+
+        // Transform food items to ensure name is a localized string
+        const localizedItems = Array.isArray(response.items)
+            ? response.items.map(item => ({
+                ...item,
+                name: item._multilingual?.name?.[apiService.language] || 
+                      item._multilingual?.name?.en || 
+                      Object.values(item._multilingual?.name || {})[0] || 
+                      item.name || 
+                      'Unnamed',
+                description: item._multilingual?.description?.[apiService.language] || 
+                             item._multilingual?.description?.en || 
+                             Object.values(item._multilingual?.description || {})[0] || 
+                             item.description || 
+                             'No description',
+                // Preserve the category data as well
+                category: item.category ? {
+                    ...item.category,
+                    name: item.category._multilingual?.name?.[apiService.language] || 
+                          item.category._multilingual?.name?.en || 
+                          item.category.name || 
+                          'No category'
+                } : null,
+            }))
+            : [];
+        setFoodItems(localizedItems);
+        setFoodItemsPagination({
+            currentPage: response.currentPage || 1,
+            totalPages: response.totalPages || Math.ceil(response.totalItems / (queryParams.limit || 10)),
+            totalItems: response.totalItems || response.count,
+        });
+    } catch (error) {
+        console.error('Error loading food items:', error);
+        showNotificationDialog('Error', 'Error loading menu items: ' + error.message, 'error');
+    } finally {
+        setLoading(false);
+    }
+};
+const getSafeName = (name, language) => {
+    if (typeof name === 'string') return name;
+    if (name && typeof name === 'object') {
+        return name[language] || name.en || Object.values(name)[0] || 'Unnamed';
+    }
+    return 'Unnamed';
 };
   const loadOffers = async (params = {}) => {
     setLoading(true);
@@ -1045,8 +1063,8 @@ const loadFoodItems = async (params = {}) => {
         try {
           switch (type) {
             case 'categorie': // Fixed typo from 'categorie'
-            await apiService.deleteCategory(id);
-            break;
+              await apiService.deleteCategory(id);
+              break;
               break;
             case 'menu item':
               await apiService.deleteFoodItem(id);
@@ -1224,61 +1242,72 @@ const loadFoodItems = async (params = {}) => {
   };
 
   // Enhanced Food Item Form
-  const FoodItemForm = () => {
-    const [formData, setFormData] = useState({
-      name: editingItem?.name || { en: '', es: '', ca: '', ar: '' },
-      description: editingItem?.description || { en: '', es: '', ca: '', ar: '' },
-      price: editingItem?.price || 0,
-      originalPrice: editingItem?.originalPrice || 0,
-      imageUrl: editingItem?.imageUrl || '',
-      images: editingItem?.images || [],
-      category: editingItem?.category?._id || '',
-      isVeg: editingItem?.isVeg || false,
-      isVegan: editingItem?.isVegan || false,
-      isGlutenFree: editingItem?.isGlutenFree || false,
-      isNutFree: editingItem?.isNutFree || false,
-      spiceLevel: editingItem?.spiceLevel || 'none',
-      isFeatured: editingItem?.isFeatured || false,
-      isPopular: editingItem?.isPopular || false,
-      isActive: editingItem?.isActive !== false,
-      isAvailable: editingItem?.isAvailable !== false,
-      preparationTime: editingItem?.preparationTime || 15,
-      stockQuantity: editingItem?.stockQuantity || 0,
-      lowStockAlert: editingItem?.lowStockAlert || 10,
-      sku: editingItem?.sku || `SKU-${Date.now()}`,
-      barcode: editingItem?.barcode || `BC-${Date.now()}`,
-      servingSize: editingItem?.servingSize || '',
-      weight: editingItem?.weight || 0,
-      tags: editingItem?.tags?.map(tag => tag.en).join(', ') || '',
-      availableFrom: editingItem?.availableFrom ? new Date(editingItem.availableFrom).toISOString().slice(0, 16) : '',
-      availableUntil: editingItem?.availableUntil ? new Date(editingItem.availableUntil).toISOString().slice(0, 16) : '',
-      mealSizes: editingItem?.mealSizes || [],
-      extras: editingItem?.extras || [],
-      addons: editingItem?.addons || [],
-      ingredients: editingItem?.ingredients || [],
-      allergens: editingItem?.allergens || [],
-      nutrition: editingItem?.nutrition || {
-        calories: 0,
-        protein: 0,
-        carbs: 0,
-        fat: 0,
-        fiber: 0,
-        sugar: 0,
-        sodium: 0,
-      },
-      seoData: editingItem?.seoData || {
-        metaTitle: { en: '', es: '', ca: '', ar: '' },
-        metaDescription: { en: '', es: '', ca: '', ar: '' },
-        keywords: [],
-      },
-    });
+// Enhanced Food Item Form
+ const FoodItemForm = () => {
+  const [formData, setFormData] = useState({
+    name: editingItem?._multilingual?.name || {
+      en: editingItem?.name || '',
+      es: '',
+      ca: '',
+      ar: '',
+    },
+    description: editingItem?._multilingual?.description || {
+      en: editingItem?.description || '',
+      es: '',
+      ca: '',
+      ar: '',
+    },
+    price: editingItem?.price || 0,
+    originalPrice: editingItem?.originalPrice || 0,
+    imageUrl: editingItem?.imageUrl || '',
+    images: editingItem?.images || [],
+    category: editingItem?.category?._id || '',
+    isVeg: editingItem?.isVeg || false,
+    isVegan: editingItem?.isVegan || false,
+    isGlutenFree: editingItem?.isGlutenFree || false,
+    isNutFree: editingItem?.isNutFree || false,
+    spiceLevel: editingItem?.spiceLevel || 'none',
+    isFeatured: editingItem?.isFeatured || false,
+    isPopular: editingItem?.isPopular || false,
+    isActive: editingItem?.isActive !== false,
+    isAvailable: editingItem?.isAvailable !== false,
+    preparationTime: editingItem?.preparationTime || 15,
+    stockQuantity: editingItem?.stockQuantity || 0,
+    lowStockAlert: editingItem?.lowStockAlert || 10,
+    sku: editingItem?.sku || `SKU-${Date.now()}`,
+    barcode: editingItem?.barcode || `BC-${Date.now()}`,
+    servingSize: editingItem?.servingSize || '',
+    weight: editingItem?.weight || 0,
+    tags: editingItem?.tags?.map(tag => tag.en).join(', ') || '',
+    availableFrom: editingItem?.availableFrom ? new Date(editingItem.availableFrom).toISOString().slice(0, 16) : '',
+    availableUntil: editingItem?.availableUntil ? new Date(editingItem.availableUntil).toISOString().slice(0, 16) : '',
+    mealSizes: editingItem?.mealSizes || [],
+    extras: editingItem?.extras || [],
+    addons: editingItem?.addons || [],
+    ingredients: editingItem?.ingredients || [],
+    allergens: editingItem?.allergens || [],
+    nutrition: editingItem?.nutrition || {
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      fiber: 0,
+      sugar: 0,
+      sodium: 0,
+    },
+    seoData: editingItem?.seoData || {
+      metaTitle: { en: '', es: '', ca: '', ar: '' },
+      metaDescription: { en: '', es: '', ca: '', ar: '' },
+      keywords: [],
+    },
+  });
 
-    const languages = [
-      { code: 'en', label: 'English' },
-      { code: 'es', label: 'Spanish' },
-      { code: 'ca', label: 'Catalan' },
-      { code: 'ar', label: 'Arabic' },
-    ];
+  const languages = [
+    { code: 'en', label: 'English' },
+    { code: 'es', label: 'Spanish' },
+    { code: 'ca', label: 'Catalan' },
+    { code: 'ar', label: 'Arabic' },
+  ];
 
     // Form array configurations for multilingual fields
     const mealSizeConfig = {
@@ -1318,66 +1347,77 @@ const loadFoodItems = async (params = {}) => {
       ],
     };
 
-    const addonsConfig = {
-      defaultItem: () => ({
-        name: { en: '', es: '', ca: '', ar: '' },
-        price: 0,
-        imageUrl: '',
-      }),
-      fields: [
-        ...languages.map(lang => ({
-          key: `name.${lang.code}`,
-          label: `Addon Name (${lang.label})`,
-          type: 'text',
-          placeholder: `e.g., Coca-Cola, French Fries in ${lang.label}`,
-        })),
-        { key: 'price', label: 'Price', type: 'number' },
-        { key: 'imageUrl', label: 'Image', type: 'image' },
-      ],
-    };
+const addonsConfig = {
+    defaultItem: () => ({
+      name: { en: '', es: '', ca: '', ar: '' },
+      price: 0,
+      imageUrl: '',
+    }),
+    fields: [
+      ...languages.map(lang => ({
+        key: `name.${lang.code}`,
+        label: `Addon Name (${lang.label})`,
+        type: 'text',
+        placeholder: `e.g., Coca-Cola, French Fries in ${lang.label}`,
+      })),
+      { key: 'price', label: 'Price', type: 'number' },
+      { key: 'imageUrl', label: 'Image', type: 'image' },
+    ],
+  };
 
-    const handleSubmit = (e) => {
-      e.preventDefault();
-      const submitData = {
-        ...formData,
-        tags: formData.tags
-          .split(',')
-          .map(tag => tag.trim())
-          .filter(tag => tag)
-          .map(tag => ({
-            en: tag,
-            es: tag, // You can enhance this to accept different translations
-            ca: tag,
-            ar: tag,
-          })),
-        ingredients: formData.ingredients
-          .filter(ingredient => ingredient.name?.en?.trim())
-          .map(ingredient => ({
-            name: {
-              en: ingredient.name.en || '',
-              es: ingredient.name.es || ingredient.name.en,
-              ca: ingredient.name.ca || ingredient.name.en,
-              ar: ingredient.name.ar || ingredient.name.en,
-            },
-            optional: ingredient.optional,
-          })),
-        allergens: formData.allergens.filter(allergen => allergen?.trim()),
-        availableFrom: formData.availableFrom ? new Date(formData.availableFrom).toISOString() : null,
-        availableUntil: formData.availableUntil ? new Date(formData.availableUntil).toISOString() : null,
-        seoData: {
-          ...formData.seoData,
-          keywords: formData.seoData.keywords
-            .map(k => ({
-              en: k.en || k,
-              es: k.es || k.en || k,
-              ca: k.ca || k.en || k,
-              ar: k.ar || k.en || k,
-            }))
-            .filter(k => k.en),
+ const handleSubmit = (e) => {
+  e.preventDefault();
+  const submitData = {
+    ...formData,
+    tags: formData.tags
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(tag => tag)
+      .map(tag => ({
+        en: tag,
+        es: tag,
+        ca: tag,
+        ar: tag,
+      })),
+    ingredients: formData.ingredients
+      .filter(ingredient => ingredient.name?.en?.trim())
+      .map(ingredient => ({
+        name: {
+          en: ingredient.name.en || '',
+          es: ingredient.name.es || ingredient.name.en,
+          ca: ingredient.name.ca || ingredient.name.en,
+          ar: ingredient.name.ar || ingredient.name.en,
         },
-      };
-      handleSave(submitData, 'menu-item');
-    };
+        optional: ingredient.optional,
+      })),
+    allergens: formData.allergens.filter(allergen => allergen?.trim()),
+    addons: formData.addons.map(addon => ({
+        ...addon,
+        name: {
+          en: addon.name.en || '',
+          es: addon.name.es || addon.name.en,
+          ca: addon.name.ca || addon.name.en,
+          ar: addon.name.ar || addon.name.en,
+        },
+        imageUrl: addon.imageUrl || '',
+      })),
+    availableFrom: formData.availableFrom ? new Date(formData.availableFrom).toISOString() : null,
+    availableUntil: formData.availableUntil ? new Date(formData.availableUntil).toISOString() : null,
+    seoData: {
+      ...formData.seoData,
+      keywords: formData.seoData.keywords
+        .map(k => ({
+          en: k.en || k,
+          es: k.es || k.en || k,
+          ca: k.ca || k.en || k,
+          ar: k.ar || k.en || k,
+        }))
+        .filter(k => k.en),
+    },
+  };
+  console.log('FoodItemForm: Submitting data', submitData);
+  handleSave(submitData, 'menu-item');
+};
 
     return (
       <form onSubmit={handleSubmit} className="space-y-8">
@@ -1388,26 +1428,26 @@ const loadFoodItems = async (params = {}) => {
             Basic Information
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {languages.map(lang => (
-              <div key={lang.code}>
-                <label className="block text-sm font-semibold text-gray-800 mb-3">
-                  Item Name ({lang.label}) {lang.code === 'en' && '*'}
-                </label>
-                <input
-                  type="text"
-                  required={lang.code === 'en'}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-                  value={formData.name[lang.code]}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      name: { ...formData.name, [lang.code]: e.target.value },
-                    })
-                  }
-                  placeholder={`Enter item name in ${lang.label}`}
-                />
-              </div>
-            ))}
+          {languages.map(lang => (
+            <div key={lang.code}>
+              <label className="block text-sm font-semibold text-gray-800 mb-3">
+                Item Name ({lang.label}) {lang.code === 'en' && '*'}
+              </label>
+              <input
+                type="text"
+                required={lang.code === 'en'}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                value={formData.name[lang.code] || ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    name: { ...formData.name, [lang.code]: e.target.value },
+                  })
+                }
+                placeholder={`Enter item name in ${lang.label}`}
+              />
+            </div>
+          ))}
             <div>
               <label className="block text-sm font-semibold text-gray-800 mb-3">Category *</label>
    <select
@@ -1426,36 +1466,40 @@ const loadFoodItems = async (params = {}) => {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {languages.map(lang => (
-              <div key={lang.code}>
-                <label className="block text-sm font-semibold text-gray-800 mb-3">
-                  Description ({lang.label}) {lang.code === 'en' && '*'}
-                </label>
-                <textarea
-                  rows="4"
-                  required={lang.code === 'en'}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none bg-white"
-                  value={formData.description[lang.code]}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      description: { ...formData.description, [lang.code]: e.target.value },
-                    })
-                  }
-                  placeholder={`Item description in ${lang.label}`}
-                />
-              </div>
-            ))}
-          </div>
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          {languages.map(lang => (
+            <div key={lang.code}>
+              <label className="block text-sm font-semibold text-gray-800 mb-3">
+                Description ({lang.label}) {lang.code === 'en' && '*'}
+              </label>
+              <textarea
+                rows="4"
+                required={lang.code === 'en'}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none bg-white"
+                value={formData.description[lang.code] || ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    description: { ...formData.description, [lang.code]: e.target.value },
+                  })
+                }
+                placeholder={`Item description in ${lang.label}`}
+              />
+            </div>
+          ))}
+        </div>
 
-          <div className="mt-6">
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Primary Image *</label>
-            <ImageUpload
-              value={formData.imageUrl}
-              onChange={(url) => setFormData({ ...formData, imageUrl: url })}
-            />
-          </div>
+    <div className="mt-6">
+  <label className="block text-sm font-semibold text-gray-800 mb-3">Primary Image *</label>
+  <ImageUpload
+    value={formData.imageUrl}
+    onChange={(url) => {
+      console.log('Updating primary image with URL:', url);
+      setFormData({ ...formData, imageUrl: url });
+    }}
+    id="primary-image-upload" // Add unique ID
+  />
+</div>
 
           <div className="mt-6">
             <label className="block text-sm font-semibold text-gray-800 mb-3">Additional Images</label>
@@ -1656,12 +1700,12 @@ const loadFoodItems = async (params = {}) => {
             fieldConfig={extrasConfig}
             title="Extras"
           />
-          <FormArrayField
-            items={formData.addons}
-            onChange={(addons) => setFormData({ ...formData, addons })}
-            fieldConfig={addonsConfig}
-            title="Addons"
-          />
+<FormArrayField
+  items={formData.addons}
+  onChange={(newAddons) => setFormData({ ...formData, addons: newAddons })}
+  fieldConfig={addonsConfig}
+  title="Addons"
+/>
         </div>
 <div className="bg-gradient-to-br from-yellow-50 to-white p-6 rounded-2xl border border-yellow-200">
           <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -1827,143 +1871,132 @@ const loadFoodItems = async (params = {}) => {
   };
 
   // Enhanced Category Form Component
-  const CategoryForm = () => {
-
-
-
+const CategoryForm = () => {
     const [formData, setFormData] = useState({
-      name: editingItem?.name || { en: '', es: '', ca: '', ar: '' },
-      description: editingItem?.description || { en: '', es: '', ca: '', ar: '' },
-      imageUrl: editingItem?.imageUrl || '',
-      icon: editingItem?.icon || '🍔',
-      isActive: editingItem?.isActive !== false,
-      sortOrder: editingItem?.sortOrder || 0,
+        name: editingItem?._multilingual?.name || { en: '', es: '', ca: '', ar: '' },
+        description: editingItem?._multilingual?.description || { en: '', es: '', ca: '', ar: '' },
+        imageUrl: editingItem?.imageUrl || '',
+        icon: editingItem?.icon || '',
+        isActive: editingItem?.isActive !== false,
+        sortOrder: editingItem?.sortOrder || 0,
     });
 
     const languages = [
-      { code: 'en', label: 'English' },
-      { code: 'es', label: 'Spanish' },
-      { code: 'ca', label: 'Catalan' },
-      { code: 'ar', label: 'Arabic' },
+        { code: 'en', label: 'English' },
+        { code: 'es', label: 'Spanish' },
+        { code: 'ca', label: 'Catalan' },
+        { code: 'ar', label: 'Arabic' },
     ];
 
     const handleSubmit = (e) => {
-      e.preventDefault();
-      console.log('Submitting category data:', formData); // Debug log
-
-      handleSave(formData, 'category');
+        e.preventDefault();
+        handleSave(formData, 'category');
     };
 
     return (
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="bg-gradient-to-br from-gray-50 to-white p-6 rounded-2xl border border-gray-200">
-          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            Category Information
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {languages.map(lang => (
-              <div key={lang.code}>
-                <label className="block text-sm font-semibold text-gray-800 mb-3">
-                  Name ({lang.label}) {lang.code === 'en' && '*'}
-                </label>
-                <input
-                  type="text"
-                  required={lang.code === 'en'}
-                  className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white ${lang.code === 'ar' ? 'text-right' : ''}`}
-                  value={formData.name[lang.code]}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      name: { ...formData.name, [lang.code]: e.target.value },
-                    })
-                  }
-                  placeholder={`Enter category name in ${lang.label}`}
-                  lang={lang.code}
-                />
-              </div>
-            ))}
-          </div>
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {languages.map(lang => (
-              <div key={lang.code}>
-                <label className="block text-sm font-semibold text-gray-800 mb-3">
-                  Description ({lang.label}) {lang.code === 'en' && '*'}
-                </label>
-                <textarea
-                  rows="4"
-                  required={lang.code === 'en'}
-                  className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none bg-white ${lang.code === 'ar' ? 'text-right' : ''}`}
-                  value={formData.description[lang.code]}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      description: { ...formData.description, [lang.code]: e.target.value },
-                    })
-                  }
-                  placeholder={`Enter category description in ${lang.label}`}
-                  lang={lang.code}
-                />
-              </div>
-            ))}
-          </div>
-          <div className="mt-6">
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Image URL</label>
-            <ImageUpload
-              value={formData.imageUrl}
-              onChange={(url) => setFormData({ ...formData, imageUrl: url })}
-            />
-          </div>
-          <div className="mt-6">
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Icon</label>
-            <input
-              type="text"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-              value={formData.icon}
-              onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-              placeholder="Enter emoji or icon code"
-            />
-          </div>
-          <div className="mt-6 flex items-center gap-4">
-            <input
-              type="checkbox"
-              checked={formData.isActive}
-              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label className="text-sm font-semibold text-gray-800">Active</label>
-          </div>
-          <div className="mt-6">
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Sort Order</label>
-            <input
-              type="number"
-              min="0"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-              value={formData.sortOrder}
-              onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
-            />
-          </div>
-        </div>
-        <div className="flex justify-end gap-4">
-          <button
-            type="button"
-            onClick={closeModal}
-            className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-medium"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium flex items-center gap-2"
-          >
-            {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-            Save
-          </button>
-        </div>
-      </form>
+        <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="bg-gradient-to-br from-gray-50 to-white p-6 rounded-2xl border border-gray-200">
+                <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    Category Information
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {languages.map(lang => (
+                        <div key={lang.code}>
+                            <label className="block text-sm font-semibold text-gray-800 mb-3">
+                                Category Name ({lang.label}) {lang.code === 'en' && '*'}
+                            </label>
+                            <input
+                                type="text"
+                                required={lang.code === 'en'}
+                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                                value={formData.name[lang.code] || ''}
+                                onChange={(e) =>
+                                    setFormData({
+                                        ...formData,
+                                        name: { ...formData.name, [lang.code]: e.target.value },
+                                    })
+                                }
+                                placeholder={`Enter category name in ${lang.label}`}
+                            />
+                        </div>
+                    ))}
+                    {languages.map(lang => (
+                        <div key={lang.code}>
+                            <label className="block text-sm font-semibold text-gray-800 mb-3">
+                                Description ({lang.label}) {lang.code === 'en' && '*'}
+                            </label>
+                            <textarea
+                                rows="4"
+                                required={lang.code === 'en'}
+                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none bg-white"
+                                value={formData.description[lang.code] || ''}
+                                onChange={(e) =>
+                                    setFormData({
+                                        ...formData,
+                                        description: { ...formData.description, [lang.code]: e.target.value },
+                                    })
+                                }
+                                placeholder={`Category description in ${lang.label}`}
+                            />
+                        </div>
+                    ))}
+                </div>
+                <div className="mt-6">
+                    <label className="block text-sm font-semibold text-gray-800 mb-3">Image</label>
+                    <ImageUpload
+                        value={formData.imageUrl}
+                        onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+                    />
+                </div>
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-800 mb-3">Icon</label>
+                        <input
+                            type="text"
+                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                            value={formData.icon}
+                            onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                            placeholder="e.g., 🍔"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-800 mb-3">Sort Order</label>
+                        <input
+                            type="number"
+                            min="0"
+                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                            value={formData.sortOrder}
+                            onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
+                        />
+                    </div>
+                </div>
+                <div className="mt-6">
+                    <label className="block text-sm font-semibold text-gray-800 mb-3">Status</label>
+                    <select
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                        value={formData.isActive}
+                        onChange={(e) => setFormData({ ...formData, isActive: e.target.value === 'true' })}
+                    >
+                        <option value={true}>Active</option>
+                        <option value={false}>Inactive</option>
+                    </select>
+                </div>
+            </div>
+            <div className="flex justify-end">
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 flex items-center gap-3 font-semibold transition-all duration-200 hover:scale-[0.98] shadow-lg shadow-blue-200"
+                >
+                    {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+                    <Save className="w-5 h-5" />
+                    <span>{editingItem ? 'Update' : 'Create'} Category</span>
+                </button>
+            </div>
+        </form>
     );
-  };
+};
   const BannerForm = () => {
     const [formData, setFormData] = useState({
       title: editingItem?.title || '',
@@ -2145,31 +2178,24 @@ const loadFoodItems = async (params = {}) => {
   const OrderDetails = ({ order }) => {
     return (
       <div className="space-y-8">
-        <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-2xl border border-blue-200">
+        <div className="bg-gradient-to-br from-gray-50 to-white p-6 rounded-2xl border border-gray-200">
           <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            Order Details
+            Order #{order.orderNumber || order._id?.slice(-6)}
           </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">Order Number</label>
-              <p className="text-gray-900">{order.orderNumber || `#${order._id?.slice(-6)}`}</p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-semibold text-gray-800 mb-2">Customer</label>
               <p className="text-gray-900">{order.userId?.fullName || order.customerName || 'Unknown'}</p>
             </div>
-
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">Phone</label>
-              <p className="text-gray-900">{order.userId?.phone || 'N/A'}</p>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">Delivery Type</label>
+              <p className="text-gray-900">{order.deliveryType}</p>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
-                Delivery Address
-              </label>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">Address</label>
               {order.deliveryType === 'delivery' ? (
-                <p className="font-semibold text-gray-900">{order.deliveryAddress.address},<br></br>{order.deliveryAddress.apartment}</p>
+                <p className="font-semibold text-gray-900">{order.deliveryAddress.address},<br />{order.deliveryAddress.apartment}</p>
               ) : (
                 <p className="text-gray-900">Pickup</p>
               )}
@@ -2177,14 +2203,11 @@ const loadFoodItems = async (params = {}) => {
             <div>
               <label className="block text-sm font-semibold text-gray-800 mb-2">Total</label>
               <p className="text-gray-900">{formatCurrency(order.total)}</p>
-
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-800 mb-2">Status</label>
               <p
-                className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(
-                  order.status
-                )}`}
+                className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(order.status)}`}
               >
                 {order.status}
               </p>
@@ -2199,11 +2222,14 @@ const loadFoodItems = async (params = {}) => {
                   >
                     <div>
                       <p className="text-sm font-medium text-gray-900">
-                        {item.foodItem?.name || 'Unknown Item'}
+                        {typeof item.foodItem?.name === 'object' && item.foodItem?.name
+                          ? item.foodItem.name[apiService.language] || item.foodItem.name.en || Object.values(item.foodItem.name)[0] || 'Unknown Item'
+                          : item.foodItem?.name || 'Unknown Item'}
                       </p>
                       <p className="text-xs text-gray-500">Quantity: {item.quantity}</p>
-                      <p className="text-xs text-gray-500">Special Instruction: {item.specialInstructions}</p>
-
+                      {item.specialInstructions && (
+                        <p className="text-xs text-gray-500">Special Instruction: {item.specialInstructions}</p>
+                      )}
                     </div>
                     <p className="text-sm font-medium text-gray-900">
                       {formatCurrency(item.totalPrice)}
@@ -2725,7 +2751,7 @@ const loadFoodItems = async (params = {}) => {
                     render: (item) => (
                       <img
                         src={item.imageUrl}
-                        alt={item.name[apiService.language] || item.name.en}
+                        alt={item.name || 'Unnamed'}
                         className="w-16 h-16 object-cover rounded-xl"
                       />
                     ),
@@ -2736,10 +2762,10 @@ const loadFoodItems = async (params = {}) => {
                     render: (item) => (
                       <div>
                         <p className="font-semibold text-gray-900">
-                          {typeof item.name === 'string' ? item.name : (item.name && (item.name[apiService.language] || item.name.en)) || 'Unnamed'}
+                          {item.name || 'Unnamed'}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {typeof item.description === 'string' ? item.description : (item.description && (item.description[apiService.language] || item.description.en)) || 'No description'}
+                          {item.description || 'No description'}
                         </p>
                       </div>
                     ),
@@ -2754,7 +2780,9 @@ const loadFoodItems = async (params = {}) => {
                     key: 'isActive',
                     render: (item) => (
                       <span
-                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${item.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${item.isActive
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-red-50 text-red-700 border-red-200'
                           }`}
                       >
                         {item.isActive ? 'Active' : 'Inactive'}
@@ -2767,243 +2795,146 @@ const loadFoodItems = async (params = {}) => {
                     render: (item) => item.sortOrder,
                   },
                 ]}
-
+              />
+            )}
+          </div>
+        );
+      case 'menu-items':
+        return (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Menu Items</h2>
+              <button
+                onClick={() => openModal('menu-item')}
+                className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                Add Item
+              </button>
+            </div>
+            <div className="mb-4">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search menu items..."
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl"
+              />
+            </div>
+            {loading ? (
+              <div className="text-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
+                <p className="text-sm text-gray-500 mt-2">Loading menu items...</p>
+              </div>
+            ) : foodItems.length === 0 ? (
+              <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                <p className="text-sm">No menu items found.</p>
+              </div>
+            ) : (
+              <DataGrid
+                data={foodItems}
+                title="Menu Items"
+                onEdit={(item) => openModal('menu-item', item)}
+                onDelete={(item) => handleDelete(item._id, 'food-item')}
+                pagination={foodItemsPagination}
+                onPageChange={(page) => loadFoodItems({ page })}
+                columns={[
+                  {
+                    header: 'Image',
+                    key: 'imageUrl',
+                    render: (item) => (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name || 'Unnamed'}
+                        className="w-16 h-16 object-cover rounded-xl"
+                      />
+                    ),
+                  },
+        {
+    header: 'Name',
+    key: 'name',
+    render: (item) => (
+        <div>
+            <p className="font-semibold text-gray-900">
+                {getSafeName(item._multilingual?.name || item.name, apiService.language)}
+            </p>
+            <p className="text-xs text-gray-500">
+                {getSafeName(item.category?._multilingual?.name || item.category?.name, apiService.language)}
+            </p>
+        </div>
+    ),
+},
+                  {
+                    header: 'Price',
+                    key: 'price',
+                    render: (item) => formatCurrency(item.price),
+                  },
+                  {
+                    header: 'Stock',
+                    key: 'stockQuantity',
+                    render: (item) => (
+                      <span
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${item.stockQuantity > item.lowStockAlert
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-red-50 text-red-700 border-red-200'
+                          }`}
+                      >
+                        {item.stockQuantity || 0}
+                      </span>
+                    ),
+                  },
+                  {
+                    header: 'Status',
+                    key: 'status',
+                    render: (item) => (
+                      <div className="flex flex-col gap-2">
+                        <span
+                          className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${item.isActive
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-red-50 text-red-700 border-red-200'
+                            }`}
+                        >
+                          {item.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                        <div className="flex gap-1">
+                          {item.isFeatured && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-700 border border-yellow-200">
+                              <Star className="w-3 h-3 mr-1" />
+                              Featured
+                            </span>
+                          )}
+                          {item.isPopular && (
+                            <span className="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                              Popular
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ),
+                  },
+                ]}
+                actions={[
+                  {
+                    icon: Eye,
+                    label: 'View Details',
+                    color: 'blue',
+                    onClick: (item) => openModal('menu-item', item),
+                  },
+                  {
+                    icon: Trash2,
+                    label: 'Delete',
+                    color: 'red',
+                    onClick: (item) => handleDelete(item._id, 'food-item'),
+                  },
+                ]}
               />
             )}
           </div>
         );
 
-      case 'banners':
-        return (
-          <DataGrids
-            data={banners}
-            title="Banners"
-            onEdit={(item) => openModal('banner', item)}
-            onDelete={handleDelete}
-            onAdd={() => openModal('banner')}
-            columns={[
-              {
-                header: 'Image',
-                key: 'imageUrl',
-                render: (item) => (
-                  <div className="relative">
-                    <img
-                      src={item.imageUrl}
-                      alt={item.title}
-                      className="w-32 h-16 object-cover rounded-2xl border-2 border-gray-100"
-                    />
-                  </div>
-                ),
-              },
-              {
-                header: 'Title',
-                key: 'title',
-                render: (item) => (
-                  <div>
-                    <p className="font-bold text-gray-900">{item.title}</p>
-                    {item.description && <p className="text-xs text-gray-500">{item.description}</p>}
-                  </div>
-                ),
-              },
-              {
-                header: 'Category',
-                key: 'category',
-                render: (item) => (
-                  <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold border border-blue-200">
-                    {item.category?.name || item.category || 'None'}
-                  </span>
-                ),
-              },
-              {
-                header: 'Order',
-                key: 'order',
-                render: (item) => (
-                  <span className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-xs font-semibold">
-                    {item.order || 0}
-                  </span>
-                ),
-              },
-              {
-                header: 'Schedule',
-                key: 'schedule',
-                render: (item) => (
-                  <div className="text-sm">
-                    <p className="text-gray-900">{item.startDate ? formatDate(item.startDate) : 'No start date'}</p>
-                    <p className="text-xs text-gray-500">to {item.endDate ? formatDate(item.endDate) : 'No end date'}</p>
-                  </div>
-                ),
-              },
-              {
-                header: 'Status',
-                key: 'isActive',
-                render: (item) => (
-                  <span
-                    className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${item.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
-                      }`}
-                  >
-                    {item.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                ),
-              },
-            ]}
-            actions={[
-              {
-                icon: RefreshCw,
-                label: 'Toggle Status',
-                color: 'purple',
-                onClick: async (item) => {
-                  try {
-                    await apiService.toggleBannerStatus(item._id);
-                    showNotificationDialog('Success!', 'Banner status updated successfully');
-                    loadData();
-                  } catch (error) {
-                    showNotificationDialog('Error', 'Error updating banner status: ' + error.message, 'error');
-                  }
-                },
-              },
-            ]}
-          />
-        );
-     case 'menu-items':
- return (
- <div>
- <div className="flex justify-between items-center mb-6">
- <h2 className="text-2xl font-bold text-gray-900">Menu Items</h2>
- <button
- onClick={() => openModal('menu-item')}
- className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium flex items-center gap-2"
- >
- <Plus className="w-5 h-5" />
- Add Item
- </button>
- </div>
- <div className="mb-4">
- <input
- type="text"
- value={searchTerm}
- onChange={(e) => setSearchTerm(e.target.value)}
- placeholder="Search menu items..."
- className="w-full px-4 py-3 border border-gray-200 rounded-xl"
- />
- </div>
- {loading ? (
- <div className="text-center py-12">
- <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
- <p className="text-sm text-gray-500 mt-2">Loading menu items...</p>
- </div>
- ) : foodItems.length === 0 ? (
- <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
- <p className="text-sm">No menu items found.</p>
- </div>
- ) : (
- <DataGrid
- data={foodItems}
- title="Menu Items"
- onEdit={(item) => openModal('menu-item', item)}
- onDelete={(item) => handleDelete(item._id, 'food-item')}
- pagination={foodItemsPagination}
- onPageChange={(page) => loadFoodItems({ page })}
- columns={[
- {
- header: 'Image',
- key: 'imageUrl',
- render: (item) => (
- <img
- src={item.imageUrl}
- alt={item.name || 'Unnamed'}
- className="w-16 h-16 object-cover rounded-xl"
- />
- ),
- },
-{
-  header: 'Name',
-  key: 'name',
-  render: (item) => (
-    <div>
-      <p className="font-semibold text-gray-900">
-        {typeof item.name === 'string' ? item.name : 'Unnamed'}
-      </p>
-      <p className="text-xs text-gray-500">
-        {item.category && typeof item.category.name === 'string'
-          ? item.category.name
-          : 'No category'}
-      </p>
-    </div>
-  ),
-},
- {
- header: 'Price',
- key: 'price',
- render: (item) => formatCurrency(item.price),
- },
- {
- header: 'Stock',
- key: 'stockQuantity',
- render: (item) => (
- <span
- className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${
- item.stockQuantity > item.lowStockAlert
- ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
- : 'bg-red-50 text-red-700 border-red-200'
- }`}
- >
- {item.stockQuantity || 0}
- </span>
- ),
- },
- {
- header: 'Status',
- key: 'status',
- render: (item) => (
- <div className="flex flex-col gap-2">
- <span
- className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${
- item.isActive
- ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
- : 'bg-red-50 text-red-700 border-red-200'
- }`}
- >
- {item.isActive ? 'Active' : 'Inactive'}
- </span>
- <div className="flex gap-1">
- {item.isFeatured && (
- <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-700 border border-yellow-200">
- <Star className="w-3 h-3 mr-1" />
- Featured
- </span>
- )}
- {item.isPopular && (
- <span className="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
- Popular
- </span>
- )}
- </div>
- </div>
- ),
- },
- ]}
- actions={[
- {
- icon: Eye,
- label: 'View Details',
- color: 'blue',
- onClick: (item) => openModal('menu-item', item),
- },
- {
- icon: Trash2,
- label: 'Delete',
- color: 'red',
- onClick: (item) => handleDelete(item._id, 'food-item'),
- },
- ]}
- />
- )}
- </div>
- );
       case 'orders':
         return (
           <div>
-            {/* Search bar */}
             <div className="mb-4">
               <input
                 type="text"
@@ -3026,8 +2957,8 @@ const loadFoodItems = async (params = {}) => {
               <DataGrid
                 data={orders}
                 title="Orders"
-                onEdit={(item) => openModal('order-details', item)} // Updated to open modal
-                onDelete={() => { }} // No delete action for orders
+                onEdit={(item) => openModal('order-details', item)}
+                onDelete={() => { }}
                 pagination={orderPagination}
                 onPageChange={(page) => loadOrders({ page })}
                 columns={[
@@ -3068,7 +2999,7 @@ const loadFoodItems = async (params = {}) => {
                             <LocationEdit className="w-5 h-5 text-blue-600" />
                           </div>
                           <div>
-                            <p className="font-semibold text-gray-900">{item.deliveryAddress.address},<br></br>{item.deliveryAddress.apartment}</p>
+                            <p className="font-semibold text-gray-900">{item.deliveryAddress.address},<br />{item.deliveryAddress.apartment}</p>
                           </div>
                         </div>
                       ) : (
@@ -3081,10 +3012,8 @@ const loadFoodItems = async (params = {}) => {
                           </div>
                         </div>
                       )
-
                     ),
                   },
-
                   {
                     header: 'Phone',
                     key: 'userId',
@@ -3114,19 +3043,19 @@ const loadFoodItems = async (params = {}) => {
                     render: (item) => (
                       <div className="max-w-xs">
                         <p className="text-sm text-gray-900 font-medium">
-                          {item.items?.slice(0, 2).map((orderItem) => orderItem.foodItem?.name || 'Item').join(', ')}
-                          {item.specialInstructions}
+                          {item.items?.slice(0, 2).map((orderItem) => (
+                            typeof orderItem.foodItem?.name === 'object' && orderItem.foodItem?.name
+                              ? orderItem.foodItem.name[apiService.language] || orderItem.foodItem.name.en || Object.values(orderItem.foodItem.name)[0] || 'Unknown Item'
+                              : orderItem.foodItem?.name || 'Unknown Item'
+                          )).join(', ')}
                           {item.items?.length > 2 && <span className="text-gray-500"> +{item.items.length - 2} more</span>}
                         </p>
-
                         <p className="text-xs text-gray-500 mt-1">{item.items?.length || 0} items total</p>
-                        {item.specialInstructions !== '' || item.specialInstructions !== null ? (
+                        {item.items?.some(orderItem => orderItem.specialInstructions) && (
                           <p className="text-xs text-gray-500">
-                            Special Instruction:{item.items?.slice(0, 2).map((orderItem) => orderItem.specialInstructions || 'Item').join(', ')}
-
+                            Special Instruction: {item.items.slice(0, 2).map((orderItem) => orderItem.specialInstructions || 'None').join(', ')}
                           </p>
-                        ) : ''}
-
+                        )}
                       </div>
                     ),
                   },
@@ -3138,7 +3067,6 @@ const loadFoodItems = async (params = {}) => {
                         <p className="font-bold text-lg text-gray-900">
                           {formatCurrency(item.total)}
                         </p>
-
                         {item.deliveryType === 'delivery' && (
                           <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
                             <MapPin className="w-3 h-3" />
@@ -3146,12 +3074,8 @@ const loadFoodItems = async (params = {}) => {
                           </p>
                         )}
                       </div>
-
                     ),
                   },
-
-
-
                   {
                     header: 'Status',
                     key: 'status',
@@ -3177,13 +3101,14 @@ const loadFoodItems = async (params = {}) => {
                     icon: Eye,
                     label: 'View Details',
                     color: 'blue',
-                    onClick: (item) => openModal('order-details', item), // Updated to open modal
+                    onClick: (item) => openModal('order-details', item),
                   },
                 ]}
               />
             )}
           </div>
         );
+
       case 'settings':
         return (
           <SettingsForm />
@@ -3301,13 +3226,13 @@ const loadFoodItems = async (params = {}) => {
     );
   };
 
- const handleLanguageChange = (lang) => {
-  setSelectedLanguage(lang);
-  apiService.setLanguage(lang);
-  loadData(); // Reload all data
-  loadCategories(); // Explicitly reload categories
-  loadFoodItems(); // Explicitly reload food items
-};
+  const handleLanguageChange = (lang) => {
+    setSelectedLanguage(lang);
+    apiService.setLanguage(lang);
+    loadData(); // Reload all data
+    loadCategories(); // Explicitly reload categories
+    loadFoodItems(); // Explicitly reload food items
+  };
 
   const languages = [
     { code: 'en', label: 'English' },
@@ -3315,128 +3240,126 @@ const loadFoodItems = async (params = {}) => {
     { code: 'ca', label: 'Català' },
     { code: 'ar', label: 'العربية' },
   ];
- return (
-  <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
-    <header className="bg-white shadow-xl border-b border-gray-100 sticky top-0 z-40 backdrop-blur-md bg-opacity-90">
-      <div className="flex items-center justify-between px-8 py-6">
-        <div className="flex items-center gap-6">
-          <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 p-3 rounded-2xl shadow-lg">
-            <Package className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Restaurant Admin</h1>
-            <p className="text-sm text-gray-600 font-medium">Manage your restaurant efficiently</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-6">
-          <select
-            value={selectedLanguage}
-            onChange={(e) => handleLanguageChange(e.target.value)}
-            className="px-4 py-2 bg-gray-100 rounded-xl text-sm font-medium text-gray-700 focus:ring-2 focus:ring-blue-500"
-          >
-            {languages.map((lang) => (
-              <option key={lang.code} value={lang.code}>
-                {lang.label}
-              </option>
-            ))}
-          </select>
-          <NotificationBell
-            notification={notification}
-            onClear={clearNotification}
-            onNotificationClick={handleNotificationClick}
-            fcmToken={fcmToken}
-            permissionStatus={permissionStatus}
-            requestPermission={requestPermission}
-          />
-          <div className="flex items-center gap-4 bg-gray-50 rounded-2xl px-4 py-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-              <span className="text-sm font-bold text-white">AD</span>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
+      <header className="bg-white shadow-xl border-b border-gray-100 sticky top-0 z-40 backdrop-blur-md bg-opacity-90">
+        <div className="flex items-center justify-between px-8 py-6">
+          <div className="flex items-center gap-6">
+            <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 p-3 rounded-2xl shadow-lg">
+              <Package className="w-8 h-8 text-white" />
             </div>
             <div>
-              <span className="text-sm font-bold text-gray-900">Admin User</span>
-              <p className="text-xs text-gray-500">Restaurant Owner</p>
+              <h1 className="text-3xl font-bold text-gray-900">Restaurant Admin</h1>
+              <p className="text-sm text-gray-600 font-medium">Manage your restaurant efficiently</p>
             </div>
-            <ChevronDown className="w-4 h-4 text-gray-400" />
           </div>
-          <button className="p-3 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-2xl transition-all duration-200">
-            <LogOut className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-6">
+            <select
+              value={selectedLanguage}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              className="px-4 py-2 bg-gray-100 rounded-xl text-sm font-medium text-gray-700 focus:ring-2 focus:ring-blue-500"
+            >
+              {languages.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.label}
+                </option>
+              ))}
+            </select>
+            <NotificationBell
+              notification={notification}
+              onClear={clearNotification}
+              onNotificationClick={handleNotificationClick}
+              fcmToken={fcmToken}
+              permissionStatus={permissionStatus}
+              requestPermission={requestPermission}
+            />
+            <div className="flex items-center gap-4 bg-gray-50 rounded-2xl px-4 py-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+                <span className="text-sm font-bold text-white">AD</span>
+              </div>
+              <div>
+                <span className="text-sm font-bold text-gray-900">Admin User</span>
+                <p className="text-xs text-gray-500">Restaurant Owner</p>
+              </div>
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            </div>
+            <button className="p-3 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-2xl transition-all duration-200">
+              <LogOut className="w-6 h-6" />
+            </button>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
 
-    <div className="flex">
-      <nav className="w-80 bg-white shadow-xl h-[calc(100vh-97px)] sticky top-[97px] border-r border-gray-100 backdrop-blur-md bg-opacity-90">
-        <div className="p-8">
-          <div className="space-y-3">
-            {navigationItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  if (item.id === "offers") {
-                    router.push("/offer");
-                  } else if (item.id === "contact") {
-                    router.push("/contact");
-                  } else {
-                    setActiveTab(item.id);
-                  }
-                }}
-                className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-left transition-all duration-300 font-semibold ${
-                  activeTab === item.id
-                    ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg transform scale-[1.02]`
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:scale-[1.01]"
-                }`}
-              >
-                <div
-                  className={`p-2 rounded-xl ${
-                    activeTab === item.id ? "bg-gray-900 bg-opacity-20" : "bg-gray-100"
-                  }`}
+      <div className="flex">
+        <nav className="w-80 bg-white shadow-xl h-[calc(100vh-97px)] sticky top-[97px] border-r border-gray-100 backdrop-blur-md bg-opacity-90">
+          <div className="p-8">
+            <div className="space-y-3">
+              {navigationItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    if (item.id === "offers") {
+                      router.push("/offer");
+                    } else if (item.id === "contact") {
+                      router.push("/contact");
+                    } else {
+                      setActiveTab(item.id);
+                    }
+                  }}
+                  className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-left transition-all duration-300 font-semibold ${activeTab === item.id
+                      ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg transform scale-[1.02]`
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:scale-[1.01]"
+                    }`}
                 >
-                  <item.icon className="w-5 h-5" />
-                </div>
-                <span>{item.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </nav>
-      <main className="flex-1 p-8 overflow-auto">
-        <NotificationPermissionBanner />
-        {loading ? (
-          <div className="flex items-center justify-center h-96">
-            <div className="text-center">
-              <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-              <p className="text-gray-600 font-medium">Loading your data...</p>
+                  <div
+                    className={`p-2 rounded-xl ${activeTab === item.id ? "bg-gray-900 bg-opacity-20" : "bg-gray-100"
+                      }`}
+                  >
+                    <item.icon className="w-5 h-5" />
+                  </div>
+                  <span>{item.name}</span>
+                </button>
+              ))}
             </div>
           </div>
-        ) : (
-          renderContent()
-        )}
-      </main>
-    </div>
+        </nav>
+        <main className="flex-1 p-8 overflow-auto">
+          <NotificationPermissionBanner />
+          {loading ? (
+            <div className="flex items-center justify-center h-96">
+              <div className="text-center">
+                <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+                <p className="text-gray-600 font-medium">Loading your data...</p>
+              </div>
+            </div>
+          ) : (
+            renderContent()
+          )}
+        </main>
+      </div>
 
-    {modalContent && (
-      <Modal title={modalContent.title} size={modalContent.size}>
-        {modalContent.component}
-      </Modal>
-    )}
-    <ConfirmDialog
-      isOpen={confirmDialog.isOpen}
-      onClose={() => setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null })}
-      onConfirm={confirmDialog.onConfirm}
-      title={confirmDialog.title}
-      message={confirmDialog.message}
-      confirmText={confirmDialog.confirmText}
-    />
-    <NotificationDialog
-      isOpen={notificationDialog.isOpen}
-      onClose={() => setNotificationDialog({ isOpen: false, title: '', message: '', type: 'success' })}
-      title={notificationDialog.title}
-      message={notificationDialog.message}
-      type={notificationDialog.type}
-    />
-  </div>
-);
+      {modalContent && (
+        <Modal title={modalContent.title} size={modalContent.size}>
+          {modalContent.component}
+        </Modal>
+      )}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null })}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmText={confirmDialog.confirmText}
+      />
+      <NotificationDialog
+        isOpen={notificationDialog.isOpen}
+        onClose={() => setNotificationDialog({ isOpen: false, title: '', message: '', type: 'success' })}
+        title={notificationDialog.title}
+        message={notificationDialog.message}
+        type={notificationDialog.type}
+      />
+    </div>
+  );
 };
 
 
