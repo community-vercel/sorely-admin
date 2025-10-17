@@ -610,8 +610,25 @@ const FormArrayField = ({ items, onChange, fieldConfig, title }) => {
                 {field.type === 'text' && (
                   <input
                     type="text"
-                    value={item[field.key] || ''}
-                    onChange={(e) => updateItem(index, { ...item, [field.key]: e.target.value })}
+                    value={
+                      field.key.includes('.')
+                        ? item[field.key.split('.')[0]]?.[field.key.split('.')[1]] || ''
+                        : item[field.key] || ''
+                    }
+                    onChange={(e) => {
+                      if (field.key.includes('.')) {
+                        const [parentKey, childKey] = field.key.split('.');
+                        updateItem(index, {
+                          ...item,
+                          [parentKey]: {
+                            ...item[parentKey],
+                            [childKey]: e.target.value,
+                          },
+                        });
+                      } else {
+                        updateItem(index, { ...item, [field.key]: e.target.value });
+                      }
+                    }}
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     placeholder={field.placeholder}
                   />
@@ -630,10 +647,7 @@ const FormArrayField = ({ items, onChange, fieldConfig, title }) => {
                 {field.type === 'image' && (
                   <ImageUpload
                     value={item[field.key] || ''}
-                    onChange={(url) => {
-                      console.log(`Updating addon[${index}].${field.key} with URL: ${url}`);
-                      updateItem(index, { ...item, [field.key]: url });
-                    }}
+                    onChange={(url) => updateItem(index, { ...item, [field.key]: url })}
                     id={`addon-image-upload-${index}`}
                   />
                 )}
@@ -1243,7 +1257,29 @@ const getSafeName = (name, language) => {
 
   // Enhanced Food Item Form
 // Enhanced Food Item Form
- const FoodItemForm = () => {
+const FoodItemForm = ({ onClose }) => {
+  const [apiService] = useState(new ApiService());
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [notificationDialog, setNotificationDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'success',
+  });
+  const router = useRouter();
+
+  const showNotificationDialog = (title, message, type) => {
+    setNotificationDialog({ isOpen: true, title, message, type });
+  };
+
+  const languages = [
+    { code: 'en', label: 'English' },
+    { code: 'es', label: 'Spanish' },
+    { code: 'ca', label: 'Catalan' },
+    { code: 'ar', label: 'Arabic' },
+  ];
+
   const [formData, setFormData] = useState({
     name: editingItem?._multilingual?.name || {
       en: editingItem?.name || '',
@@ -1281,10 +1317,46 @@ const getSafeName = (name, language) => {
     tags: editingItem?.tags?.map(tag => tag.en).join(', ') || '',
     availableFrom: editingItem?.availableFrom ? new Date(editingItem.availableFrom).toISOString().slice(0, 16) : '',
     availableUntil: editingItem?.availableUntil ? new Date(editingItem.availableUntil).toISOString().slice(0, 16) : '',
-    mealSizes: editingItem?.mealSizes || [],
-    extras: editingItem?.extras || [],
-    addons: editingItem?.addons || [],
-    ingredients: editingItem?.ingredients || [],
+    mealSizes: editingItem?.mealSizes?.map(size => ({
+      ...size,
+      name: size._multilingual?.name || {
+        en: size.name || '',
+        es: '',
+        ca: '',
+        ar: '',
+      },
+      additionalPrice: size.additionalPrice || 0,
+    })) || [],
+    extras: editingItem?.extras?.map(extra => ({
+      ...extra,
+      name: extra._multilingual?.name || {
+        en: extra.name || '',
+        es: '',
+        ca: '',
+        ar: '',
+      },
+      price: extra.price || 0,
+    })) || [],
+    addons: editingItem?.addons?.map(addon => ({
+      ...addon,
+      name: addon._multilingual?.name || {
+        en: addon.name || '',
+        es: '',
+        ca: '',
+        ar: '',
+      },
+      price: addon.price || 0,
+      imageUrl: addon.imageUrl || '',
+    })) || [],
+    ingredients: editingItem?.ingredients?.map(ingredient => ({
+      ...ingredient,
+      name: ingredient._multilingual?.name || {
+        en: ingredient.name || '',
+        es: '',
+        ca: '',
+        ar: '',
+      },
+    })) || [],
     allergens: editingItem?.allergens || [],
     nutrition: editingItem?.nutrition || {
       calories: 0,
@@ -1295,59 +1367,149 @@ const getSafeName = (name, language) => {
       sugar: 0,
       sodium: 0,
     },
-    seoData: editingItem?.seoData || {
-      metaTitle: { en: '', es: '', ca: '', ar: '' },
-      metaDescription: { en: '', es: '', ca: '', ar: '' },
-      keywords: [],
+    seoData: {
+      metaTitle: editingItem?.seoData?._multilingual?.metaTitle || {
+        en: editingItem?.seoData?.metaTitle || '',
+        es: '',
+        ca: '',
+        ar: '',
+      },
+      metaDescription: editingItem?.seoData?._multilingual?.metaDescription || {
+        en: editingItem?.seoData?.metaDescription || '',
+        es: '',
+        ca: '',
+        ar: '',
+      },
+      keywords: editingItem?.seoData?.keywords?.map(keyword => keyword.en).join(', ') || '',
     },
   });
 
-  const languages = [
-    { code: 'en', label: 'English' },
-    { code: 'es', label: 'Spanish' },
-    { code: 'ca', label: 'Catalan' },
-    { code: 'ar', label: 'Arabic' },
-  ];
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setLoading(true);
+        const response = await apiService.getCategories();
+        setCategories(response.categories || []);
+      } catch (error) {
+        showNotificationDialog('Error', 'Failed to load categories.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadCategories();
+  }, [apiService]);
 
-    // Form array configurations for multilingual fields
-    const mealSizeConfig = {
-      defaultItem: () => ({
-        name: { en: '', es: '', ca: '', ar: '' },
-        additionalPrice: 0,
-      }),
-      fields: [
-        ...languages.map(lang => ({
-          key: `name.${lang.code}`,
-          label: `Size Name (${lang.label})`,
-          type: 'text',
-          placeholder: `e.g., Large, Family Size in ${lang.label}`,
-        })),
-        {
-          key: 'additionalPrice',
-          label: 'Price',
-          type: 'number',
-          placeholder: 'For default, keep price 0 (main price already applies)',
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      // Validate required fields
+      if (!formData.name.en || !formData.description.en || !formData.category) {
+        showNotificationDialog('Error', 'English name, description, and category are required.', 'error');
+        return;
+      }
+
+      const payload = {
+        ...formData,
+        name: formData.name.en, // Fallback for non-multilingual APIs
+        description: formData.description.en, // Fallback for non-multilingual APIs
+        _multilingual: {
+          name: formData.name,
+          description: formData.description,
         },
-      ],
-    };
-
-    const extrasConfig = {
-      defaultItem: () => ({
-        name: { en: '', es: '', ca: '', ar: '' },
-        price: 0,
-      }),
-      fields: [
-        ...languages.map(lang => ({
-          key: `name.${lang.code}`,
-          label: `Extra Name (${lang.label})`,
-          type: 'text',
-          placeholder: `e.g., Extra Cheese, Extra Sauce in ${lang.label}`,
+        seoData: {
+          ...formData.seoData,
+          metaTitle: formData.seoData.metaTitle.en, // Fallback
+          metaDescription: formData.seoData.metaDescription.en, // Fallback
+          _multilingual: {
+            metaTitle: formData.seoData.metaTitle,
+            metaDescription: formData.seoData.metaDescription,
+          },
+          keywords: formData.seoData.keywords ? formData.seoData.keywords.split(',').map(k => ({ en: k.trim() })) : [],
+        },
+        mealSizes: formData.mealSizes.map(size => ({
+          ...size,
+          name: size.name.en, // Fallback
+          _multilingual: { name: size.name },
         })),
-        { key: 'price', label: 'Price', type: 'number' },
-      ],
-    };
+        extras: formData.extras.map(extra => ({
+          ...extra,
+          name: extra.name.en, // Fallback
+          _multilingual: { name: extra.name },
+        })),
+        addons: formData.addons.map(addon => ({
+          ...addon,
+          name: addon.name.en, // Fallback
+          _multilingual: { name: addon.name },
+        })),
+        ingredients: formData.ingredients.map(ingredient => ({
+          ...ingredient,
+          name: ingredient.name.en, // Fallback
+          _multilingual: { name: ingredient.name },
+        })),
+        tags: formData.tags ? formData.tags.split(',').map(tag => ({ en: tag.trim() })) : [],
+      };
 
-const addonsConfig = {
+      if (editingItem) {
+        await apiService.updateFoodItem(editingItem._id, payload);
+        showNotificationDialog('Success', 'Item updated successfully!', 'success');
+      } else {
+        await apiService.createFoodItem(payload);
+        showNotificationDialog('Success', 'Item created successfully!', 'success');
+      }
+      router.push('/items');
+      onClose();
+    } catch (error) {
+      showNotificationDialog('Error', 'Failed to save item. Please try again.', 'error');
+    }
+  };
+
+  const mealSizesConfig = {
+    defaultItem: () => ({
+      name: { en: '', es: '', ca: '', ar: '' },
+      additionalPrice: 0,
+    }),
+    fields: [
+      ...languages.map(lang => ({
+        key: `name.${lang.code}`,
+        label: `Meal Size Name (${lang.label})`,
+        type: 'text',
+        placeholder: `e.g., Small, Medium, Large in ${lang.label}`,
+      })),
+      { key: 'additionalPrice', label: 'Additional Price', type: 'number', placeholder: 'e.g., 9.9' },
+    ],
+  };
+
+  const extrasConfig = {
+    defaultItem: () => ({
+      name: { en: '', es: '', ca: '', ar: '' },
+      price: 0,
+    }),
+    fields: [
+      ...languages.map(lang => ({
+        key: `name.${lang.code}`,
+        label: `Extra Name (${lang.label})`,
+        type: 'text',
+        placeholder: `e.g., Extra Cheese, Extra Sauce in ${lang.label}`,
+      })),
+      { key: 'price', label: 'Price', type: 'number', placeholder: 'e.g., 2.5' },
+    ],
+  };
+
+  const ingredientsConfig = {
+    defaultItem: () => ({
+      name: { en: '', es: '', ca: '', ar: '' },
+    }),
+    fields: [
+      ...languages.map(lang => ({
+        key: `name.${lang.code}`,
+        label: `Ingredient Name (${lang.label})`,
+        type: 'text',
+        placeholder: `e.g., Tomato, Cheese in ${lang.label}`,
+      })),
+    ],
+  };
+
+  const addonsConfig = {
     defaultItem: () => ({
       name: { en: '', es: '', ca: '', ar: '' },
       price: 0,
@@ -1360,74 +1522,20 @@ const addonsConfig = {
         type: 'text',
         placeholder: `e.g., Coca-Cola, French Fries in ${lang.label}`,
       })),
-      { key: 'price', label: 'Price', type: 'number' },
+      { key: 'price', label: 'Price', type: 'number', placeholder: 'e.g., 3.0' },
       { key: 'imageUrl', label: 'Image', type: 'image' },
     ],
   };
 
- const handleSubmit = (e) => {
-  e.preventDefault();
-  const submitData = {
-    ...formData,
-    tags: formData.tags
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(tag => tag)
-      .map(tag => ({
-        en: tag,
-        es: tag,
-        ca: tag,
-        ar: tag,
-      })),
-    ingredients: formData.ingredients
-      .filter(ingredient => ingredient.name?.en?.trim())
-      .map(ingredient => ({
-        name: {
-          en: ingredient.name.en || '',
-          es: ingredient.name.es || ingredient.name.en,
-          ca: ingredient.name.ca || ingredient.name.en,
-          ar: ingredient.name.ar || ingredient.name.en,
-        },
-        optional: ingredient.optional,
-      })),
-    allergens: formData.allergens.filter(allergen => allergen?.trim()),
-    addons: formData.addons.map(addon => ({
-        ...addon,
-        name: {
-          en: addon.name.en || '',
-          es: addon.name.es || addon.name.en,
-          ca: addon.name.ca || addon.name.en,
-          ar: addon.name.ar || addon.name.en,
-        },
-        imageUrl: addon.imageUrl || '',
-      })),
-    availableFrom: formData.availableFrom ? new Date(formData.availableFrom).toISOString() : null,
-    availableUntil: formData.availableUntil ? new Date(formData.availableUntil).toISOString() : null,
-    seoData: {
-      ...formData.seoData,
-      keywords: formData.seoData.keywords
-        .map(k => ({
-          en: k.en || k,
-          es: k.es || k.en || k,
-          ca: k.ca || k.en || k,
-          ar: k.ar || k.en || k,
-        }))
-        .filter(k => k.en),
-    },
-  };
-  console.log('FoodItemForm: Submitting data', submitData);
-  handleSave(submitData, 'menu-item');
-};
-
-    return (
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Basic Information */}
-        <div className="bg-gradient-to-br from-gray-50 to-white p-6 rounded-2xl border border-gray-200">
-          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            Basic Information
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+  return (
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Basic Information */}
+      <div className="bg-gradient-to-br from-gray-50 to-white p-6 rounded-2xl border border-gray-200">
+        <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+          Basic Information
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {languages.map(lang => (
             <div key={lang.code}>
               <label className="block text-sm font-semibold text-gray-800 mb-3">
@@ -1448,24 +1556,23 @@ const addonsConfig = {
               />
             </div>
           ))}
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Category *</label>
-   <select
-  required
-  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-  value={formData.category}
-  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
->
-  <option value="">Select category</option>
-  {categories.map((cat) => (
-    <option key={cat._id} value={cat._id}>
-      {cat.name || 'Unnamed'}
-    </option>
-  ))}
-</select>
-            </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-3">Category *</label>
+            <select
+              required
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            >
+              <option value="">Select category</option>
+              {categories.map((cat) => (
+                <option key={cat._id} value={cat._id}>
+                  {cat._multilingual?.name?.[apiService.language] || cat.name || 'Unnamed'}
+                </option>
+              ))}
+            </select>
           </div>
-
+        </div>
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
           {languages.map(lang => (
             <div key={lang.code}>
@@ -1488,387 +1595,156 @@ const addonsConfig = {
             </div>
           ))}
         </div>
+      </div>
 
-    <div className="mt-6">
-  <label className="block text-sm font-semibold text-gray-800 mb-3">Primary Image *</label>
-  <ImageUpload
-    value={formData.imageUrl}
-    onChange={(url) => {
-      console.log('Updating primary image with URL:', url);
-      setFormData({ ...formData, imageUrl: url });
-    }}
-    id="primary-image-upload" // Add unique ID
-  />
-</div>
+      {/* Image Upload */}
+      <div className="bg-gradient-to-br from-gray-50 to-white p-6 rounded-2xl border border-gray-200">
+        <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+          Images
+        </h4>
+        <ImageUpload
+          value={formData.imageUrl}
+          onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+          id="primary-image-upload"
+        />
+      </div>
 
-          <div className="mt-6">
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Additional Images</label>
-            <ImageUpload
-              value={formData.images}
-              onChange={(urls) =>
-                setFormData({
-                  ...formData,
-                  images: urls.map(url => ({ url, alt: { en: formData.name.en, es: formData.name.es, ca: formData.name.ca, ar: formData.name.ar } })),
-                })
-              }
-              multiple={true}
-            />
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-emerald-50 to-white p-6 rounded-2xl border border-emerald-200">
-          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-            Pricing & Stock
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Current Price *</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Original Price</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
-                value={formData.originalPrice}
-                onChange={(e) => setFormData({ ...formData, originalPrice: parseFloat(e.target.value) || 0 })}
-                placeholder="For showing discounts"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Prep Time (min) *</label>
-              <input
-                type="number"
-                min="1"
-                required
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
-                value={formData.preparationTime}
-                onChange={(e) => setFormData({ ...formData, preparationTime: parseInt(e.target.value) || 15 })}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Stock Quantity</label>
-              <input
-                type="number"
-                min="0"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
-                value={formData.stockQuantity}
-                onChange={(e) => setFormData({ ...formData, stockQuantity: parseInt(e.target.value) || 0 })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Low Stock Alert</label>
-              <input
-                type="number"
-                min="0"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
-                value={formData.lowStockAlert}
-                onChange={(e) => setFormData({ ...formData, lowStockAlert: parseInt(e.target.value) || 10 })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">SKU</label>
-              <input
-                type="text"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
-                value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                placeholder="Product SKU"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Barcode</label>
-              <input
-                type="text"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
-                value={formData.barcode}
-                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                placeholder="Product barcode"
-              />
-            </div>
-          </div>
-        </div>
-<div className="bg-gradient-to-br from-purple-50 to-white p-6 rounded-2xl border border-purple-200">
-          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-            Food Properties & Status
-          </h4>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
-            {[
-              { key: 'isVeg', label: 'Vegetarian', desc: 'Contains no meat' },
-              { key: 'isVegan', label: 'Vegan', desc: 'Plant-based only' },
-              { key: 'isGlutenFree', label: 'Gluten Free', desc: 'No gluten ingredients' },
-              { key: 'isNutFree', label: 'Nut Free', desc: 'Safe from nuts' },
-              { key: 'isFeatured', label: 'Featured Item', desc: 'Show on homepage' },
-              { key: 'isPopular', label: 'Popular', desc: 'Mark as popular choice' },
-              { key: 'isActive', label: 'Active', desc: 'Available for ordering' },
-              { key: 'isAvailable', label: 'Available', desc: 'Currently in stock' },
-            ].map(({ key, label, desc }) => (
-              <div key={key} className="bg-white p-4 rounded-xl border border-gray-200">
-                <div className="flex items-center gap-3 mb-2">
-                  <input
-                    type="checkbox"
-                    id={key}
-                    checked={formData[key]}
-                    onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })}
-                    className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                  />
-                  <label htmlFor={key} className="text-sm font-semibold text-gray-800">
-                    {label}
-                  </label>
-                </div>
-                <p className="text-xs text-gray-500 ml-8">{desc}</p>
-              </div>
-            ))}
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Spice Level</label>
-            <select
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
-              value={formData.spiceLevel}
-              onChange={(e) => setFormData({ ...formData, spiceLevel: e.target.value })}
-            >
-              <option value="none">None</option>
-              <option value="mild">Mild 🌶️</option>
-              <option value="medium">Medium 🌶️🌶️</option>
-              <option value="hot">Hot 🌶️🌶️🌶️</option>
-              <option value="very-hot">Very Hot 🌶️🌶️🌶️🌶️</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Availability Schedule */}
-        <div className="bg-gradient-to-br from-cyan-50 to-white p-6 rounded-2xl border border-cyan-200">
-          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-cyan-500 rounded-full"></div>
-            Availability Schedule
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Available From</label>
-              <input
-                type="datetime-local"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all bg-white"
-                value={formData.availableFrom}
-                onChange={(e) => setFormData({ ...formData, availableFrom: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-3">Available Until</label>
-              <input
-                type="datetime-local"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all bg-white"
-                value={formData.availableUntil}
-                onChange={(e) => setFormData({ ...formData, availableUntil: e.target.value })}
-              />
-            </div>
-          </div>
-        </div>
-
-
-        {/* Product Details */}
-        <div className="bg-gradient-to-br from-orange-50 to-white p-6 rounded-2xl border border-orange-200">
-          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-            Product Details
-          </h4>
-          <FormArrayField
-            items={formData.mealSizes}
-            onChange={(mealSizes) => setFormData({ ...formData, mealSizes })}
-            fieldConfig={mealSizeConfig}
-            title="Meal Sizes"
-          />
-          <FormArrayField
-            items={formData.extras}
-            onChange={(extras) => setFormData({ ...formData, extras })}
-            fieldConfig={extrasConfig}
-            title="Extras"
-          />
-<FormArrayField
-  items={formData.addons}
-  onChange={(newAddons) => setFormData({ ...formData, addons: newAddons })}
-  fieldConfig={addonsConfig}
-  title="Addons"
-/>
-        </div>
-<div className="bg-gradient-to-br from-yellow-50 to-white p-6 rounded-2xl border border-yellow-200">
-          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-            Ingredients
-          </h4>
-          <div className="space-y-3">
-            {formData.ingredients.map((ingredient, index) => (
-              <div key={index} className="flex items-center gap-3 bg-white p-4 rounded-xl border border-gray-200">
-                <input
-                  type="text"
-                  className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-all bg-white"
-                  value={ingredient.name || ''}
-                  onChange={(e) => {
-                    const newIngredients = [...formData.ingredients];
-                    newIngredients[index] = { ...ingredient, name: e.target.value };
-                    setFormData({ ...formData, ingredients: newIngredients });
-                  }}
-                  placeholder="Ingredient name"
-                />
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={ingredient.optional || false}
-                    onChange={(e) => {
-                      const newIngredients = [...formData.ingredients];
-                      newIngredients[index] = { ...ingredient, optional: e.target.checked };
-                      setFormData({ ...formData, ingredients: newIngredients });
-                    }}
-                    className="w-4 h-4 rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
-                  />
-                  <span className="font-medium text-gray-700">Optional</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newIngredients = formData.ingredients.filter((_, i) => i !== index);
-                    setFormData({ ...formData, ingredients: newIngredients });
-                  }}
-                  className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-all duration-200"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={() => setFormData({
-                ...formData,
-                ingredients: [...formData.ingredients, { name: '', optional: false }]
-              })}
-              className="text-yellow-700 hover:text-yellow-900 text-sm flex items-center gap-2 transition-colors bg-white p-3 rounded-xl border-2 border-dashed border-yellow-200 hover:border-yellow-300 w-full justify-center"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Ingredient</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Allergens */}
-        <div className="bg-gradient-to-br from-red-50 to-white p-6 rounded-2xl border border-red-200">
-          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-            Allergens
-          </h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {['nuts', 'dairy', 'eggs', 'soy', 'wheat', 'fish', 'shellfish', 'sesame'].map((allergen) => (
-              <label key={allergen} className="flex items-center gap-3 text-sm bg-white p-4 rounded-xl border border-gray-200 hover:border-red-200 transition-colors cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.allergens.includes(allergen)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setFormData({
-                        ...formData,
-                        allergens: [...formData.allergens, allergen]
-                      });
-                    } else {
-                      setFormData({
-                        ...formData,
-                        allergens: formData.allergens.filter(a => a !== allergen)
-                      });
-                    }
-                  }}
-                  className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                />
-                <span className="capitalize font-medium text-gray-700">{allergen}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-        {/* SEO Data */}
-        <div className="bg-gradient-to-br from-purple-50 to-white p-6 rounded-2xl border border-purple-200">
-          <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-            SEO Data
-          </h4>
+      {/* SEO Data */}
+      <div className="bg-gradient-to-br from-gray-50 to-white p-6 rounded-2xl border border-gray-200">
+        <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+          SEO Data
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {languages.map(lang => (
-            <div key={lang.code} className="mb-4">
+            <div key={lang.code}>
               <label className="block text-sm font-semibold text-gray-800 mb-3">
-                Meta Title ({lang.label})
+                Meta Title ({lang.label}) {lang.code === 'en' && '*'}
               </label>
               <input
                 type="text"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
-                value={formData.seoData.metaTitle[lang.code]}
+                required={lang.code === 'en'}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                value={formData.seoData.metaTitle[lang.code] || ''}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
                     seoData: {
                       ...formData.seoData,
-                      metaTitle: { ...formData.seoData.metaTitle, [lang.code]: e.target.value },
+                      metaTitle: {
+                        ...formData.seoData.metaTitle,
+                        [lang.code]: e.target.value,
+                      },
                     },
                   })
                 }
-                placeholder={`Meta title in ${lang.label}`}
+                placeholder={`Enter meta title in ${lang.label}`}
               />
             </div>
           ))}
+        </div>
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
           {languages.map(lang => (
-            <div key={lang.code} className="mb-4">
+            <div key={lang.code}>
               <label className="block text-sm font-semibold text-gray-800 mb-3">
-                Meta Description ({lang.label})
+                Meta Description ({lang.label}) {lang.code === 'en' && '*'}
               </label>
               <textarea
                 rows="4"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all resize-none bg-white"
-                value={formData.seoData.metaDescription[lang.code]}
+                required={lang.code === 'en'}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none bg-white"
+                value={formData.seoData.metaDescription[lang.code] || ''}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
                     seoData: {
                       ...formData.seoData,
-                      metaDescription: { ...formData.seoData.metaDescription, [lang.code]: e.target.value },
+                      metaDescription: {
+                        ...formData.seoData.metaDescription,
+                        [lang.code]: e.target.value,
+                      },
                     },
                   })
                 }
-                placeholder={`Meta description in ${lang.label}`}
+                placeholder={`Enter meta description in ${lang.label}`}
               />
             </div>
           ))}
         </div>
-
-        <div className="flex justify-end gap-4">
-          <button
-            type="button"
-            onClick={closeModal}
-            className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-medium"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium flex items-center gap-2"
-          >
-            {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-            Save
-          </button>
+        <div className="mt-6">
+          <label className="block text-sm font-semibold text-gray-800 mb-3">Keywords</label>
+          <input
+            type="text"
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+            value={formData.seoData.keywords || ''}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                seoData: {
+                  ...formData.seoData,
+                  keywords: e.target.value,
+                },
+              })
+            }
+            placeholder="Enter keywords (comma-separated)"
+          />
         </div>
-      </form>
-    );
-  };
+      </div>
+
+      {/* Array Fields */}
+      <FormArrayField
+        items={formData.mealSizes}
+        onChange={(mealSizes) => setFormData({ ...formData, mealSizes })}
+        fieldConfig={mealSizesConfig}
+        title="Meal Sizes"
+      />
+      <FormArrayField
+        items={formData.extras}
+        onChange={(extras) => setFormData({ ...formData, extras })}
+        fieldConfig={extrasConfig}
+        title="Extras"
+      />
+      <FormArrayField
+        items={formData.ingredients}
+        onChange={(ingredients) => setFormData({ ...formData, ingredients })}
+        fieldConfig={ingredientsConfig}
+        title="Ingredients"
+      />
+      <FormArrayField
+        items={formData.addons}
+        onChange={(addons) => setFormData({ ...formData, addons })}
+        fieldConfig={addonsConfig}
+        title="Addons"
+      />
+
+      {/* Form Actions */}
+      <div className="flex justify-end gap-4">
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+        >
+          Save
+        </button>
+      </div>
+
+      <NotificationDialog
+        isOpen={notificationDialog.isOpen}
+        onClose={() => setNotificationDialog({ isOpen: false, title: '', message: '', type: 'success' })}
+        title={notificationDialog.title}
+        message={notificationDialog.message}
+        type={notificationDialog.type}
+      />
+    </form>
+  );
+};
 
   // Enhanced Category Form Component
 const CategoryForm = () => {
@@ -1888,20 +1764,10 @@ const CategoryForm = () => {
         { code: 'ar', label: 'Arabic' },
     ];
 
-     const handleSubmit = (e) => {
-    e.preventDefault();
-    const submitData = {
-      ...formData,
-      name: {
-        en: formData.name.en || '',
-        es: formData.name.es || formData.name.en,
-        ca: formData.name.ca || formData.name.en,
-        ar: formData.name.ar || formData.name.en,
-      },
-      imageUrl: formData.imageUrl || '',
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        handleSave(formData, 'category');
     };
-    // Call API to save category (e.g., apiService.createCategory)
-  };
 
     return (
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -1952,7 +1818,7 @@ const CategoryForm = () => {
                         </div>
                     ))}
                 </div>
-               <div className="mt-6">
+                    <div className="mt-6">
           <label className="block text-sm font-semibold text-gray-800 mb-3">Category Image *</label>
           <ImageUpload
             value={formData.imageUrl}
@@ -1963,7 +1829,6 @@ const CategoryForm = () => {
             id="category-image-upload"
           />
         </div>
-      
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label className="block text-sm font-semibold text-gray-800 mb-3">Icon</label>
@@ -2929,18 +2794,7 @@ const CategoryForm = () => {
                   },
                 ]}
                 actions={[
-                  {
-                    icon: Eye,
-                    label: 'View Details',
-                    color: 'blue',
-                    onClick: (item) => openModal('menu-item', item),
-                  },
-                  {
-                    icon: Trash2,
-                    label: 'Delete',
-                    color: 'red',
-                    onClick: (item) => handleDelete(item._id, 'food-item'),
-                  },
+                 
                 ]}
               />
             )}
