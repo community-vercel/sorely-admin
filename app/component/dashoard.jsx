@@ -1888,10 +1888,20 @@ const CategoryForm = () => {
         { code: 'ar', label: 'Arabic' },
     ];
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        handleSave(formData, 'category');
+     const handleSubmit = (e) => {
+    e.preventDefault();
+    const submitData = {
+      ...formData,
+      name: {
+        en: formData.name.en || '',
+        es: formData.name.es || formData.name.en,
+        ca: formData.name.ca || formData.name.en,
+        ar: formData.name.ar || formData.name.en,
+      },
+      imageUrl: formData.imageUrl || '',
     };
+    // Call API to save category (e.g., apiService.createCategory)
+  };
 
     return (
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -1942,13 +1952,18 @@ const CategoryForm = () => {
                         </div>
                     ))}
                 </div>
-                <div className="mt-6">
-                    <label className="block text-sm font-semibold text-gray-800 mb-3">Image</label>
-                    <ImageUpload
-                        value={formData.imageUrl}
-                        onChange={(url) => setFormData({ ...formData, imageUrl: url })}
-                    />
-                </div>
+               <div className="mt-6">
+          <label className="block text-sm font-semibold text-gray-800 mb-3">Category Image *</label>
+          <ImageUpload
+            value={formData.imageUrl}
+            onChange={(url) => {
+              console.log(`Updating category imageUrl: ${url}`);
+              setFormData({ ...formData, imageUrl: url });
+            }}
+            id="category-image-upload"
+          />
+        </div>
+      
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label className="block text-sm font-semibold text-gray-800 mb-3">Icon</label>
